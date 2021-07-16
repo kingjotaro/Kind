@@ -4,8 +4,6 @@ Crypto.TinyKeccak(
   input: Buffer8
   inputByteLen: U32
   delimitedSuffix: U8
-  output: Buffer8
-  outputByteLen: U32
 ): Buffer8
   let state = Buffer8.alloc(8)
   let sizeof_state = 200
@@ -46,6 +44,24 @@ Crypto.TinyKeccak.absorb(
       input_idx + blockSize,
       state,
       delimitedSuffix)
+
+Crypto.TinyKeccak.squeeze(
+  state: Buffer8
+  output: Buffer8
+  output_idx: U32
+  outputByteLen: U32
+  rateInBytes: U32
+): Buffer8
+  if outputByteLen =? 0 then
+    output
+  else
+    let blockSize = U32.min(outputByteLen, rateInBytes)
+    for i: U32 from output_idx to output_idx + blockSize with output:
+      Buffer8.set(i,
+        Buffer8.get(i, state)
+        output)
+    let state = Crypto.TinyKeccak.permute(state)
+    Crypto.TinyKeccak.squeeze(state, output, output_idx + blockSize, outputByteLen - blockSize, rateInBytes)
 
 Crypto.TinyKeccak.permute(
   state: Buffer8
