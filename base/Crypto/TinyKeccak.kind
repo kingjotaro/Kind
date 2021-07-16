@@ -73,7 +73,37 @@ Crypto.TinyKeccak.permute(
   let state = Keccak.TinyKeccak.iota(state)
   state
 
+// #define readLane(x, y) load64((uint8_t*)state+sizeof(tKeccakLane)*i(x, y))
+// typedef uint64_t tKeccakLane;
+Crypto.TinyKeccak.load64(x: Buffer8, x_idx: U32, out: Buffer8, out_idx: U32): Buffer8
+  for i: U32 from 0 to 8 with out:
+    let v = Buffer8.get(7 - i + x_idx, x)
+    Buffer8.set(out_idx + i, v, out)
+  out
+
+Crypto.TinyKeccak.readLane(
+  state: Buffer8
+  x: U32
+  y: U32
+  out: Buffer8
+  out_idx: U32
+): Buffer8
+  Crypto.TinyKeccak.load64(state, 8*(x + (5*y)), out, out_idx)
+
 Keccak.TinyKeccak.theta(state: Buffer8): Buffer8
+  let C = [] :: List<Buffer8>
+  for x: U32 from 0 to 5 with C:
+    let col = Buffer8.alloc(3)
+    let temp = Buffer8.alloc(3)
+    for i: U32 from 0 to 5 with col:
+      let temp = Crypto.TinyKeccak.readLane(state, x, i, temp, 0)
+      for j: U32 from 0 to 8 with col:
+        let v = U8.xor(
+          Buffer8.get(j, col)
+          Buffer8.get(j, temp))
+        Buffer8.set(j, v, col)
+      col
+    (col & C)
   state
 
 Keccak.TinyKeccak.rho(state: Buffer8): Buffer8
