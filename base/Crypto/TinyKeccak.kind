@@ -66,4 +66,24 @@ Crypto.TinyKeccak.squeeze(
 Crypto.TinyKeccak.permute(
   state: Buffer8
 ): Buffer8
+  let state = Keccak.TinyKeccak.theta(state)
+  let state = Keccak.TinyKeccak.rho(state)
+  let state = Keccak.TinyKeccak.pi(state)
+  let state = Keccak.TinyKeccak.chi(state)
+  let state = Keccak.TinyKeccak.iota(state)
+  state
+
+Keccak.TinyKeccak.theta(state: Buffer8): Buffer8
+  state
+
+Keccak.TinyKeccak.rho(state: Buffer8): Buffer8
+  state
+
+Keccak.TinyKeccak.pi(state: Buffer8): Buffer8
+  state
+
+Keccak.TinyKeccak.chi(state: Buffer8): Buffer8
+  state
+
+Keccak.TinyKeccak.iota(state: Buffer8): Buffer8
   state
