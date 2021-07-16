@@ -1,0 +1,13 @@
+Crypto.TinyKeccak(
+  rate: U32
+  capacity: U32
+  input: Buffer8
+  inputByteLen: U32
+  delimitedSuffix: U8
+  output: Buffer8
+  outputByteLen: U32
+): Buffer8
+  let state = Buffer8.alloc(8)
+  let sizeof_state = 200
+  let rateInBytes = rate/8
+  state
