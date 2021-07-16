@@ -104,6 +104,19 @@ Keccak.TinyKeccak.theta(state: Buffer8): Buffer8
         Buffer8.set(j, v, col)
       col
     (col & C)
+  for x from 0 to 5 with state:
+    let D = Buffer8.alloc(3)
+    let col1 = C[(x+4)%5] <> Buffer8.alloc(3)
+    let col2 = C[(x+1)%5] <> Buffer8.alloc(3)
+    for i: U32 from 0 to 8 with D:
+      let rol64_1_byte = U8.or(
+        U8.shr(Buffer8.get((i+1)%8, col2), 7)
+        U8.shl(Buffer8.get(i, col2), 1))
+      let v = U8.xor(
+        Buffer8.get(i, col1),
+        rol64_1_byte)
+      Buffer8.set(i, v, D)
+    state
   state
 
 Keccak.TinyKeccak.rho(state: Buffer8): Buffer8
