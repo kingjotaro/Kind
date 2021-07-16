@@ -306,6 +306,7 @@ void Keccak(unsigned int rate, unsigned int capacity, const unsigned char *input
             blockSize = 0;
         }
     }
+    // blockSize == inputByteLen % rateInBytes here
 
     /* === Do the padding and switch to the squeezing phase === */
     /* Absorb the last few bits and add the first bit of padding (which coincides with the delimiter in delimitedSuffix) */
