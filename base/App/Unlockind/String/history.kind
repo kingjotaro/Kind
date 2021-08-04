@@ -1,7 +1,17 @@
 //Função que acumula os resultados anteriores pra mostrar em histórico
 App.Unlockind.String.history(
+  game: App.Unlockind.play
   input: List<String>
-  history: List<List<String>>
-): List<List<String>>
+  results: List<String>
+): List<Pair<List<String>, List<String>>>
 
-  input & history
+  open game
+  let history = game@history
+  let new_try = {input, results}
+  case history { 
+    nil:
+      [new_try]
+    cons:
+      new_try & history
+  }
+  

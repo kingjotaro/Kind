@@ -14,12 +14,11 @@ App.Unlockind.when: App.When<App.Unlockind.State>
             //"medium": App.Unlockind.difficulty.medium
             //"hard": App.Unlockind.difficulty.hard
           } default App.Unlockind.difficulty.play
-          
           open state
           IO { 
             get passwords = App.Unlockind.Passwords.passcode
             let user_input = ["","","",""]
-            let stage = App.Unlockind.play.new(passwords,user_input, [[]], 4, difficulty)
+            let stage = App.Unlockind.play.new(passwords,user_input, [{[],[]}], 4, difficulty)
             let stage = App.Unlockind.stage.lobby(stage)
             let new_state = state.local@game <- stage
             App.set_local!(new_state)
@@ -30,25 +29,21 @@ App.Unlockind.when: App.When<App.Unlockind.State>
       case event { 
         input:
             switch String.eql(event.id) { 
-              "num_1" : App.set_local!(state.local@game <- App.Unlockind.stage.lobby(setter(event.text, 0)))
-              "num_2" :App.set_local!(state.local@game <- App.Unlockind.stage.lobby(setter(event.text, 1)))
-              "num_3" :App.set_local!(state.local@game <- App.Unlockind.stage.lobby(setter(event.text, 2)))
-              "num_4" :App.set_local!(state.local@game <- App.Unlockind.stage.lobby(setter(event.text, 3)))
-          } default App.Pass!
+              "num_1": App.set_local!(state.local@game <- App.Unlockind.stage.lobby(setter(event.text, 0)))
+              "num_2": App.set_local!(state.local@game <- App.Unlockind.stage.lobby(setter(event.text, 1)))
+              "num_3": App.set_local!(state.local@game <- App.Unlockind.stage.lobby(setter(event.text, 2)))
+              "num_4": App.set_local!(state.local@game <- App.Unlockind.stage.lobby(setter(event.text, 3)))
+          } default App.pass!
         mouse_click:
           switch String.eql(event.id) {
             "submit" :
               IO {
-                let result = App.Unlockind.String.result(game.play)
-                let text = result@fst
-                let stage = result@snd
-                let state = state.local@game <- stage
-                App.print!(List.show!(String.show, text))
-                App.set_local!(state)
+                let stage = App.Unlockind.String.result(game.play)
+                let local = state.local@game <- stage
+                App.set_local!(local)
               }
-          } default App.Pass!
-      } default App.Pass!
-        
-}
+          } default App.pass!
+      } default App.pass!
+  }
 
 

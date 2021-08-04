@@ -2,20 +2,17 @@ App.Unlockind.Draw.lobby(
   state: App.Unlockind.play
 ): DOM
 
-//3 divs -> Esquerda // Meio // Direita
   open state
   input = App.Unlockind.String.empty(state@input)
-  test = some(2)
 
   container_style = {
-      "width": "100vw", 
-      "height": "80vh", 
-      "display": "flex", 
-      "flex-direction": "column", 
-      "justify-content": "center", 
-      "align-items": "center",
-      "font-size": "2rem"
-    }
+    "width": "100vw", 
+    "height": "100vh", 
+    "flex-direction": "row", 
+    "display": "flex", 
+    "justify-content": "center", 
+    "align-items": "center",
+  }
   input_style = {
     "width": "5vw",
     "height": "10vh",
@@ -23,20 +20,50 @@ App.Unlockind.Draw.lobby(
     "font-size": "2rem",
     "font-family": "monospace",
     "outline": "transparent"
-    }
+  }
   button_style = {
-  "font-size": "2rem",
-  "font-family": "monospace",
-  "margin-left": "15px",
-  "padding": "2px"
+    "font-size": "2rem",
+    "font-family": "monospace",
+    "margin-left": "15px",
+    "padding": "2px"
+  }
+  left_style = { 
+    "border-width": "0px 0px 0px 2px"
+    "border-style": "solid"
+    "width": "15%"
+    "height": "100%"
+    "font-size": "1.5rem"
   }
 
+  right_style = { 
+    "border-width": "0px 2px 0px 0px"
+    "border-style": "solid"
+    "width": "8%"
+    "height": "100%"
+    "font-size": "1.5rem"
+    "flex-direction": "column", 
+  }
+
+  center_style = { 
+    "width": "70%"
+    "height": "100%"
+    "flex-direction": "row", 
+    "display": "flex", 
+    "justify-content": "center", 
+    "align-items": "center",
+  }
+
+  let answer_list =  state.history
+  let answer_list = List.show!(Pair.show!!(List.show!(Function.id!), List.show!(Function.id!)), answer_list)
+
   <div style=container_style>
-    <div>
+    <div style=right_style>"tutorial aqui"</div>
+    <div style=center_style>
       for i in [1,2,3,4]: 
         <input id="num_"|Nat.show(i) value=input(i-1) style=input_style> 
         </input>
       <button id="submit" style=button_style>"Submit"</button>
     </div>
+    <div style=left_style>answer_list</div>
   </div>
 

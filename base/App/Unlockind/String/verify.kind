@@ -10,9 +10,9 @@ App.Unlockind.String.verify(
     nil:""
     cons:
       if Nat.eql(a,b) then
-        "V "
+        "V"
       else if App.Unlockind.Bool.has(b, senha) then
-        "O "
+        "O"
       else 
-        "X "
+        "X"
   }

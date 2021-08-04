@@ -1,17 +1,18 @@
 App.Unlockind.String.result(
   play: App.Unlockind.play
-): Pair<List<String>, App.Unlockind.stage>
+): App.Unlockind.stage
 
-  result = App.Unlockind.Passwords.read(play@input)
-  result = App.Unlockind.String.answer(play@password, result, play@password)
-  win = App.Unlockind.Bool.over(result)
-  has_tries = App.Unlockind.Bool.tries(play@tries)
+  let result = App.Unlockind.Passwords.read(play@input)
+  let result = App.Unlockind.String.answer(play@password, result, play@password)
+  let win = App.Unlockind.Bool.over(result)
+  let has_tries = App.Unlockind.Bool.tries(play@tries)
   
   if win then
-    {result, App.Unlockind.stage.select}
+    App.Unlockind.stage.select
   else if has_tries then
-    new_try = App.Unlockind.When.dec_tries(play)
-    stage = App.Unlockind.stage.lobby(new_try)
-    {result, stage}
+    let new_try = App.Unlockind.When.dec_tries(play)
+    let new_history = App.Unlockind.When.update_history(new_try)
+    stage = App.Unlockind.stage.lobby(new_history)
+    stage
   else
-    {result, App.Unlockind.stage.select}
+    App.Unlockind.stage.select
