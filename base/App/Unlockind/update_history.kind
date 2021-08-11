@@ -1,9 +1,0 @@
-App.Unlockind.When.update_history(
-  play: App.Unlockind.play
-): App.Unlockind.play
-
-  let result = App.Unlockind.Passwords.read(play@input)
-  let result = App.Unlockind.String.answer(play@password, result, play@password)
-  let input = play@input
-  let history = App.Unlockind.String.history(play, input, result)
-  play@history <- history

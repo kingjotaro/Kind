@@ -8,10 +8,5 @@ App.Unlockind.String.history(
   open game
   let history = game@history
   let new_try = {input, results}
-  case history { 
-    nil:
-      [new_try]
-    cons:
-      new_try & history
-  }
+  new_try & history
   
