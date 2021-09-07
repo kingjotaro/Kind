@@ -1,0 +1,5 @@
+type App.Coup.Card {
+  new(
+    Character: App.Coup.Character
+  )
+}

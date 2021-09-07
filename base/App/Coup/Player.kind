@@ -1,0 +1,8 @@
+type App.Coup.Player {
+  new(
+    address: String
+    id: Nat
+    gold: Nat
+    hand: App.Coup.Hand
+  )
+}

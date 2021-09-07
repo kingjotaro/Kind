@@ -1,0 +1,11 @@
+App.Coup.Deck.three_each: List<App.Coup.Character>
+  let deck = 
+  [
+    {3, App.Coup.Character.ambassador}
+    {3, App.Coup.Character.assassin}
+    {3, App.Coup.Character.captain}
+    {3, App.Coup.Character.contessa}
+    {3, App.Coup.Character.duke}
+  ]
+  App.Coup.Cards.create_deck(deck)
+  

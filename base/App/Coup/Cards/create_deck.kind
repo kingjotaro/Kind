@@ -1,0 +1,8 @@
+App.Coup.Cards.create_deck(deck: List<Pair<Nat, App.Coup.Character>>): List<App.Coup.Character>
+  list = []
+  for pair in deck with list:
+    let {count, character} = pair
+    for i from 0 to count with list:
+      character & list
+    list
+  list

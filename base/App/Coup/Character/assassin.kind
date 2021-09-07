@@ -1,0 +1,5 @@
+App.Coup.Character.assassin: App.Coup.Character
+  let name = "Assassin"
+  let img = []
+  let actions = [App.Coup.CharacterAction.assassinate]
+  App.Coup.Character.new(name, img, actions)

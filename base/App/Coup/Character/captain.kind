@@ -1,0 +1,5 @@
+App.Coup.Character.captain: App.Coup.Character
+  let name = "Captain"
+  let img = []
+  let actions = [App.Coup.CharacterAction.steal, App.Coup.CharacterAction.block_stealing_captain]
+  App.Coup.Character.new(name, img, actions)

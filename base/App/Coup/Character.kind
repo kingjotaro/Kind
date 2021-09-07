@@ -1,0 +1,7 @@
+type App.Coup.Character {
+  new(
+    name: String
+    img: List<String>
+    actions: List<App.Coup.CharacterAction>
+  )
+}

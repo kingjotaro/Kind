@@ -1,0 +1,2 @@
+App.Coup.Hand: Type 
+  Pair<App.Coup.Card, App.Coup.Card>

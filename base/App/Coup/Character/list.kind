@@ -1,0 +1,8 @@
+App.Coup.Character.list: List<App.Coup.Character>
+  [
+    App.Coup.Character.ambassador
+    App.Coup.Character.assassin
+    App.Coup.Character.captain
+    App.Coup.Character.contessa
+    App.Coup.Character.duke
+  ]

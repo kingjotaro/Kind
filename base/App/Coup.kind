@@ -1,0 +1,138 @@
+App.Coup: App<App.Coup.State>
+  let img  = VoxBox.alloc_capacity(U32.mul(65536#32, 8#32))
+  let init = App.Coup.init
+  let draw = App.Coup.draw(img)
+  let when = App.Coup.when
+  let tick = App.Coup.tick
+  let post = App.Coup.post
+  App.new!(init, draw, when, tick, post)
+
+App.Coup.State: App.State
+  App.State.new(App.Coup.State.local, App.Coup.State.global)
+
+type App.Coup.State.local {
+  new(
+    user: String
+    nickname: String
+    room: String
+  )
+}
+
+type App.Coup.State.global {
+  preparation(
+    users: Map<App.Coup.User>
+  )
+  game(
+    players: Map<App.Coup.Player>
+    turn_address: String
+    phase: App.Coup.Game
+    time: U64
+  )
+}
+
+App.Coup.State: App.state
+  App.State.new(App.Coup.State.local, App.Coup.State.global)
+
+App.Coup.init: App.Init<App.Coup.State>
+  let user = ""
+  let nickname = "nickname"
+  let room = "4b4c494e01012501"
+  let users = Map.new<App.Coup.User>
+  App.Store.new!(
+    App.Coup.State.local.new(user, nickname, room)
+    App.Coup.State.global.preparation(users)
+  )
+
+App.Coup.draw(img: VoxBox): App.Draw<App.Coup.State>
+  (state)
+  open state
+  open state.local as local
+  open state.global as global
+  <button id = "start">"start"</button>
+
+App.Coup.when: App.When<App.Coup.State>
+  (event, state)
+  open state
+  open state.local as local
+  open state.global as global
+  case event {
+    init: 
+      let new_local = state.local@user <- event.user
+      let new_user = App.Coup.User.new(local.nickname)
+      log("click")
+      IO {
+        App.new_post!(local.room, App.Coup.Event.serialize_post(App.Coup.Event.add_user(new_user)))
+        App.watch!(local.room)
+        App.set_local!(new_local)
+      }
+    mouse_click:
+      switch String.eql(event.id) {
+        "start": IO {
+          App.new_post!(local.room, App.Coup.Event.serialize_post(App.Coup.Event.start_game))
+        }
+      }default App.pass!
+    frame:
+      case state.global {
+        preparation:
+          log(Nat.show(List.length!(Map.to_list!(state.global.users))))
+          App.pass!
+        game:
+          log("funciona")
+          App.pass!
+      }
+  }default App.pass!
+
+App.Coup.tick: App.Tick<App.Coup.State>
+  App.no_tick<App.Coup.State>
+
+App.Coup.post: App.Post<App.Coup.State>
+  (time, room, addr, data, glob)
+  let event = App.Coup.Event.deserialize_post(data)
+  case event {
+    none: glob
+    some:
+      case event.value {
+        add_user: 
+          case glob {
+            preparation:
+              log("post")
+              let new_users = glob.users{addr} <- event.value.user
+              App.Coup.State.global.preparation(new_users)
+            game: glob
+          }
+        start_game:
+          App.Coup.post.start_game(glob)
+      }
+  }
+
+App.Coup.post.start_game(glob: App.Coup.State.global): App.Coup.State.global
+  let players = Map.new<App.Coup.Player>
+  let count = 0
+  let pair = {players, count}
+  //let deck = App.Coup.Deck.three_each
+  case glob {
+    preparation:
+      for addr:user in glob.users with pair:
+        let hand = 
+          if count =? 0 then 
+            { 
+              App.Coup.Card.new(App.Coup.Character.duke),
+              App.Coup.Card.new(App.Coup.Character.captain)
+            }
+          else
+            {  
+              App.Coup.Card.new(App.Coup.Character.assassin),
+              App.Coup.Card.new(App.Coup.Character.ambassador)
+            }
+        let new_player = App.Coup.Player.new(addr, pair@snd, 2, hand)
+        let players = pair@fst{addr} <- new_player
+        {players, count}
+      let player_list = Map.to_list!(pair@fst)
+      case player_list {
+        nil: glob
+        cons:
+          let phase = App.Coup.Game.match(App.Coup.Game.Phase.action, [])
+          App.Coup.State.global.game(players, player_list.head@fst, phase, 0)
+      }
+    game: glob
+  }

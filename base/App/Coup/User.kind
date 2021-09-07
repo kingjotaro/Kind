@@ -1,0 +1,5 @@
+type App.Coup.User {
+  new(
+    nickname: String
+  )
+}deriving (serializer, deserializer)
