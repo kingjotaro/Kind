@@ -1,6 +1,8 @@
-Foo: Type
-  Either<Foo, Unit>
-
-Test: Foo
-  Either.left!!(Either.left!!(Either.left!!(Either.right!!(unit))))
-  
+Test: _
+  let a = [1,2,3,4,5,6,7,8,9]
+  let size = List.length!(a)
+  let b = List.get_randoms!(Nat.random(23473245),size,a)
+  let c = "["
+    for x in b@result with c:
+    c | Nat.show(x) | ","
+  c | "]"

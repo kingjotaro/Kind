@@ -1,0 +1,2 @@
+App.Coup.Deck: Type 
+  List<App.Coup.Character>

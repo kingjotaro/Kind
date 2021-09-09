@@ -17,7 +17,8 @@ var all_kind_apps = fs.readdirSync("App").filter(x => x.slice(-5) === ".kind");
 
 // App that will be displayed when accessing http://uwu.tech
 var server_apps = [
-  'Browser.kind',   
+  'Browser.kind', 
+  'Coup.kind',  
   'Hello.kind',
   'Kind.kind',
   'KL.kind',

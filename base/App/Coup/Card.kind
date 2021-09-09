@@ -1,5 +1,6 @@
 type App.Coup.Card {
   new(
-    Character: App.Coup.Character
+    character: App.Coup.Character
+    revealed: Bool
   )
 }

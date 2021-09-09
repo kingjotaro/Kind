@@ -1,5 +1,5 @@
 App.Coup.Character.contessa: App.Coup.Character
   let name = "Contessa"
   let img = []
-  let actions = [App.Coup.CharacterAction.block_assassination]
+  let actions = [App.Coup.Action.block_assassination]
   App.Coup.Character.new(name, img, actions)

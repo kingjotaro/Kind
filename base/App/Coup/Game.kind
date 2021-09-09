@@ -1,11 +1,3 @@
-type App.Coup.Game {
-  preparation
-  match(
-    phase: App.Coup.Game.Phase
-    running_action: List<App.Coup.Game.RunningAction>
-  )
-}
-
 type App.Coup.Game.Phase {
   action
   counteraction
@@ -15,7 +7,8 @@ type App.Coup.Game.Phase {
 type App.Coup.Game.RunningAction {
   new(
     address: String
-    action: App.Coup.CharacterAction
+    action: App.Coup.Action
+    target: String
     challenged: Maybe<String>
   )
 }

@@ -1,4 +1,4 @@
-App.Coup.Deck.three_each: List<App.Coup.Character>
+App.Coup.Deck.three_each: App.Coup.Deck
   let deck = 
   [
     {3, App.Coup.Character.ambassador}

@@ -15,6 +15,7 @@ type App.Coup.State.local {
     user: String
     nickname: String
     room: String
+    //time: Nat
   )
 }
 
@@ -23,9 +24,11 @@ type App.Coup.State.global {
     users: Map<App.Coup.User>
   )
   game(
+    deck: App.Coup.Deck
     players: Map<App.Coup.Player>
-    turn_address: String
-    phase: App.Coup.Game
+    turn_address: Maybe<String>
+    phase: App.Coup.Game.Phase
+    running_action: List<App.Coup.Game.RunningAction>
     time: U64
   )
 }
@@ -36,7 +39,8 @@ App.Coup.State: App.state
 App.Coup.init: App.Init<App.Coup.State>
   let user = ""
   let nickname = "nickname"
-  let room = "4b4c494e01012501"
+  let room = "4b4c494e01212552"
+  let time = 0
   let users = Map.new<App.Coup.User>
   App.Store.new!(
     App.Coup.State.local.new(user, nickname, room)
@@ -45,10 +49,224 @@ App.Coup.init: App.Init<App.Coup.State>
 
 App.Coup.draw(img: VoxBox): App.Draw<App.Coup.State>
   (state)
-  open state
-  open state.local as local
-  open state.global as global
-  <button id = "start">"start"</button>
+  let local = state@local
+  let global = state@global
+  
+  open local
+  open global
+
+  let main_style = 
+  { 
+    "height": "100vh"
+    "width": "100vw"
+    "display": "flex"
+    "flex-direction": "column"
+    "justify-content": "center"
+    "align-items": "center"
+  }
+
+  let buttons_style = 
+  {
+    "width": "600px"
+    "display": "flex"
+    "flex-direction": "row"
+    "flex-wrap": "wrap"
+    "justify-content": "center"
+    "align-items": "flex-start"
+  }
+
+  let challenge_style = 
+  {
+    "margin": "15px 0"
+    "height": "50px"
+    "font-size": "32px"
+  }
+  let players_style = 
+  {
+    "padding": "20px"
+    "width": "100%"
+    "height": "200px"
+    "display": "flex"
+    "flex-direction": "row"
+    "flex-wrap": "wrap"
+    "justify-content": "space-evenly"
+    "align-items": "flex-start"
+  }
+
+  let challenged_text =
+    case global {
+      preparation: ""
+      game: 
+        case global.running_action {
+          nil: ""
+          cons: "Challenge Actions:"
+        }
+    }
+
+  <div style = main_style>
+    <div style = players_style>
+      for div in App.Coup.players(local, global): div
+    </div>
+    <div style = buttons_style>
+      for div in App.Coup.action_buttons(local, global): div
+    </div>
+    <div style = challenge_style>challenged_text</div>
+    <div style = buttons_style>
+      for div in App.Coup.challenge_buttons(local, global): div
+    </div>
+  </div>
+
+App.Coup.players(local: App.Coup.State.local, global: App.Coup.State.global): List<DOM>
+  let players = []
+  let main_style = 
+    {
+      "width": "20%"
+      "padding": "15px"
+      "height": "100%"
+      "display": "flex"
+      "flex-direction": "column"
+      "background": "AliceBlue"
+      "border": "2px DarkCyan solid"
+      "border-radius": "20px"
+      "text-align": "center"
+    }
+  
+  let char_style = 
+    {
+      "height": "80%"
+      "width": "40%"
+      "margin": "10% 5%"
+      "display": "flex"
+      "flex-direction": "column"
+      "justify-content": "center"
+      "align-items": "center"
+    }
+
+  case global {
+    preparation: []
+    game:
+      let list = Map.to_list!(global.players)
+      for player in list with players:
+        let div = 
+        <div style = main_style>
+          <div style = {"height": "20%"}>player@fst</div>
+          <div style = {"height": "20%"}>"Gold: " | Nat.show(player@snd@gold)</div>
+          <div style = {"height": "60%", "display": "flex", "flex-direction": "row", "justify-content": "center", "align-items": "center"}>
+            <div style = char_style>
+              <div> if player@snd@hand@fst@revealed then "Revealed" else "Hidden"</div>
+              <div> player@snd@hand@fst@character@name </div>
+            </div>
+            <div style = char_style>
+              <div> if player@snd@hand@snd@revealed then "Revealed" else "Hidden"</div>
+              <div> player@snd@hand@snd@character@name </div>
+            </div>
+          </div>
+        </div>
+        div & players
+      players
+    }
+
+App.Coup.challenge_buttons(local: App.Coup.State.local, global: App.Coup.State.global): List<DOM>
+  cards = []
+  case global {
+    preparation: []
+    game:
+      for action in global.running_action with cards:
+        App.Coup.challenge_card(action) & cards
+      cards
+  }
+  // <div style = card_style>
+    
+  // </div>
+
+App.Coup.challenge_card(action: App.Coup.Game.RunningAction): DOM
+  open action
+  let background =
+    case action.challenged {
+      none: "LightBlue"
+      some: "LightSalmon"
+    }
+  let card_style =
+  {
+    "width": "200px"
+    "height": "200px"
+    "padding": "10%"
+    "display": "flex"
+    "background-color": background
+    "flex-direction": "column"
+    "justify-content": "center"
+    "align-items": "center"
+    "border": "2px red solid"
+    "border-radius": "2px"
+  }
+
+  let section_style = 
+  {
+    "height": "20%"
+    "width": "80%"
+  }
+
+  let challenged_text =
+    case action.challenged {
+      none: "This action was not challenged yet"
+      some: "Challenged by " | action.challenged.value
+    }
+
+  <div style = card_style>
+    <div style = section_style>"User: "   | action.address </div> // To be changed to nickname
+    <div style = section_style>"Target: " | action.target </div> // To be changed to nickname
+    <div style = section_style>"Action: " | App.Coup.Action.get_name(action.action) </div>
+    <div style = section_style>challenged_text </div>
+  </div>
+
+App.Coup.action_buttons(local: App.Coup.State.local, global: App.Coup.State.global): List<DOM>
+  case global {
+    preparation: 
+      [App.Coup.button("start", "start")]
+    game:
+      case global.phase {
+        action:
+          [
+            App.Coup.button("A-income", "Income")
+            App.Coup.button("A-foreign_aid", "Foreign Aid")
+            App.Coup.button("A-coup", "Coup")
+            App.Coup.button("B-tax", "Duke - Tax")
+            App.Coup.button("B-assassinate", "Assassin - Assassinate")
+            App.Coup.button("B-steal", "Captain - Steal")
+            App.Coup.button("B-exchange", "Ambassador - Exchange")
+          ]
+        counteraction:
+          case global.running_action as action {
+            nil: 
+              [ <div>"No actions taken yet"</div>]
+            cons:
+              case action.head{
+                foreign_ad:
+                  [ App.Coup.button("C-block_foreign_aid", "Duke - Block Foreign Aid")]
+                assassinate:
+                  if action.head.target =? local@user then
+                    [ App.Coup.button("C-block_assassination", "Contessa - Block Asassination")]
+                  else
+                    [<div>"You are not the target"</div>]
+                steal:
+                  if action.head.target =? local@user then
+                    [ 
+                      App.Coup.button("C-block_stealing_ambassador", "Ambassador - Block Stealing")
+                      App.Coup.button("C-block_stealing_captain", "Captain - Block Stealing")
+                    ]
+                  else
+                    [<div>"You are not the target"</div>]
+              } default 
+                  [<div>"This Action cannot be countered"</div>]
+          }
+          // <div style = style>
+          //   {App.Coup.button("A-income", "Income")}
+          // </div>
+        aftermatch:
+          [ App.Coup.button("A-income", "Income")]
+      }
+  }
+
 
 App.Coup.when: App.When<App.Coup.State>
   (event, state)
@@ -59,7 +277,6 @@ App.Coup.when: App.When<App.Coup.State>
     init: 
       let new_local = state.local@user <- event.user
       let new_user = App.Coup.User.new(local.nickname)
-      log("click")
       IO {
         App.new_post!(local.room, App.Coup.Event.serialize_post(App.Coup.Event.add_user(new_user)))
         App.watch!(local.room)
@@ -71,15 +288,12 @@ App.Coup.when: App.When<App.Coup.State>
           App.new_post!(local.room, App.Coup.Event.serialize_post(App.Coup.Event.start_game))
         }
       }default App.pass!
-    frame:
-      case state.global {
-        preparation:
-          log(Nat.show(List.length!(Map.to_list!(state.global.users))))
-          App.pass!
-        game:
-          log("funciona")
-          App.pass!
-      }
+    // frame:
+    //   IO {
+    //     get time = IO.get_time
+    //     let new_local = state.local@time <- time
+    //     App.set_local!(new_local)
+    //   }
   }default App.pass!
 
 App.Coup.tick: App.Tick<App.Coup.State>
@@ -95,44 +309,57 @@ App.Coup.post: App.Post<App.Coup.State>
         add_user: 
           case glob {
             preparation:
-              log("post")
               let new_users = glob.users{addr} <- event.value.user
               App.Coup.State.global.preparation(new_users)
             game: glob
           }
         start_game:
-          App.Coup.post.start_game(glob)
+          let deck = App.Coup.Deck.three_each
+          App.Coup.post.start_game(glob, deck, F64.to_nat(U64.to_f64(time)))
       }
   }
 
-App.Coup.post.start_game(glob: App.Coup.State.global): App.Coup.State.global
-  let players = Map.new<App.Coup.Player>
-  let count = 0
-  let pair = {players, count}
-  //let deck = App.Coup.Deck.three_each
+App.Coup.post.start_game(glob: App.Coup.State.global, deck: App.Coup.Deck, time: Nat): App.Coup.State.global
   case glob {
     preparation:
-      for addr:user in glob.users with pair:
-        let hand = 
-          if count =? 0 then 
-            { 
-              App.Coup.Card.new(App.Coup.Character.duke),
-              App.Coup.Card.new(App.Coup.Character.captain)
-            }
-          else
-            {  
-              App.Coup.Card.new(App.Coup.Character.assassin),
-              App.Coup.Card.new(App.Coup.Character.ambassador)
-            }
-        let new_player = App.Coup.Player.new(addr, pair@snd, 2, hand)
-        let players = pair@fst{addr} <- new_player
-        {players, count}
-      let player_list = Map.to_list!(pair@fst)
-      case player_list {
-        nil: glob
-        cons:
-          let phase = App.Coup.Game.match(App.Coup.Game.Phase.action, [])
-          App.Coup.State.global.game(players, player_list.head@fst, phase, 0)
-      }
+      log("Number used to randomize the deck shuffle: " |Nat.show(time))
+      // Creates empty Players List
+      let players = Map.new<App.Coup.Player>
+      // Shuffles deck once (uses game time)
+      let deck = App.Coup.Deck.shuffle(deck, time)
+      let users = Map.to_list!(glob.users)
+      // Adds Players to the Players List and removes their cards from the Deck
+      let {players, deck} = App.Coup.post.start_game.go(deck, 0, players, users)
+      let player_list = Map.to_list!(players)
+      App.Coup.State.global.game(deck, players, none, App.Coup.Game.Phase.action, [], 0)
     game: glob
+  }
+
+App.Coup.post.start_game.go(
+  deck: App.Coup.Deck,
+  count: Nat,
+  players: Map<App.Coup.Player>,
+  users: List<Pair<String, App.Coup.User>>
+): Pair<Map<App.Coup.Player>, App.Coup.Deck>
+  case users {
+    nil: {players, deck}
+    cons:
+      let addr = users.head@fst
+      let hand = {deck[0], deck[1]}
+      // Adds User to the Players List if there are enough cards in the Deck
+      case hand@fst as a hand@snd as b {
+        some some:
+          let character = App.Coup.Card.new
+          // Creates hand from the 2 first cards from Deck
+          let hand = {character(a.value, false), character(b.value, false)}
+          // Creates the Player
+          let player = App.Coup.Player.new(addr, count, 2, hand)
+          // Removes 2 first cards from Deck
+          let deck = Pair.snd!!(List.split!(deck, 2))
+          let count = count + 1
+          // Adds created Player to the Players List
+          let players = players{addr} <- player
+          // Repeat until the rest of users are added
+          App.Coup.post.start_game.go(deck, 0, players, users.tail)
+      }default App.Coup.post.start_game.go(deck, count, players, users.tail)
   }

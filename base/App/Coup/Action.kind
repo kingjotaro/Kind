@@ -1,0 +1,28 @@
+type App.Coup.Action {
+  income
+  foreign_aid
+  coup
+  tax
+  assassinate
+  steal
+  exchange
+  block_foreign_aid
+  block_assassination
+  block_stealing_ambassador
+  block_stealing_captain
+}
+
+App.Coup.Action.get_name(action: App.Coup.Action): String
+  case action {
+    income: "Income"
+    foreign_aid: "Foreign Aid"
+    coup: "Coup"
+    tax: "Tax"
+    assassinate: "Assassinate"
+    steal: "Steal"
+    exchange: "Exchange"
+    block_foreign_aid: "Block Foreign Aid"
+    block_assassination: "Block Assassination"
+    block_stealing_ambassador: "Block Stealing Ambassador"
+    block_stealing_captain: "Block Stealing Captain"
+  }

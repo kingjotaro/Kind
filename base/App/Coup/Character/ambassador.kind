@@ -1,5 +1,5 @@
 App.Coup.Character.ambassador: App.Coup.Character
   let name = "Ambassador"
   let img = []
-  let actions = [App.Coup.CharacterAction.exchange, App.Coup.CharacterAction.block_stealing_ambassador]
+  let actions = [App.Coup.Action.exchange, App.Coup.Action.block_stealing_ambassador]
   App.Coup.Character.new(name, img, actions)

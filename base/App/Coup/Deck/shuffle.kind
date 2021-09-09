@@ -1,0 +1,3 @@
+App.Coup.Deck.shuffle(deck: App.Coup.Deck, seed: Nat): App.Coup.Deck
+  let shuffle = List.get_randoms!(seed, List.length!(deck), deck)
+  shuffle@result
