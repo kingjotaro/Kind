@@ -1,8 +1,16 @@
-Test: _
-  let a = [1,2,3,4,5,6,7,8,9]
-  let size = List.length!(a)
-  let b = List.get_randoms!(Nat.random(23473245),size,a)
-  let c = "["
-    for x in b@result with c:
-    c | Nat.show(x) | ","
-  c | "]"
+App.Coup.post.start_game(glob: App.Coup.State.global, deck: App.Coup.Deck, time: Nat): App.Coup.State.global
+  case glob {
+    preparation:
+      log("Number used to randomize the deck shuffle: " |Nat.show(time))
+      // Creates empty Players List
+      let players = Map.new<App.Coup.Player>
+      // Shuffles deck once (uses game time)
+      let deck = App.Coup.Deck.shuffle(deck, time)
+      let users = Map.to_list!(glob.users)
+      // Adds Players to the Players List and removes their cards from the Deck
+      let {players, deck} = App.Coup.post.start_game.go(deck, 0, players, users)
+      let player_list = Map.to_list!(players)
+      let status = App.Coup.Game.new(deck, players, none, App.Coup.Game.Phase.action, [])
+      App.Coup.State.global.game(status, 0 :: U64)
+    game: glob
+  }

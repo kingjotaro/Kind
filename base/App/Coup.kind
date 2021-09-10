@@ -24,14 +24,25 @@ type App.Coup.State.global {
     users: Map<App.Coup.User>
   )
   game(
+    status: App.Coup.Game
+    // deck: App.Coup.Deck
+    // players: Map<App.Coup.Player>
+    // turn_address: Maybe<String>
+    // phase: App.Coup.Game.Phase
+    // running_action: List<App.Coup.Game.RunningAction>
+    time: U64
+  )
+}
+
+type App.Coup.Game {
+  new(
     deck: App.Coup.Deck
     players: Map<App.Coup.Player>
     turn_address: Maybe<String>
     phase: App.Coup.Game.Phase
     running_action: List<App.Coup.Game.RunningAction>
-    time: U64
   )
-}
+} 
 
 App.Coup.State: App.state
   App.State.new(App.Coup.State.local, App.Coup.State.global)
@@ -97,7 +108,7 @@ App.Coup.draw(img: VoxBox): App.Draw<App.Coup.State>
     case global {
       preparation: ""
       game: 
-        case global.running_action {
+        case global.status@running_action {
           nil: ""
           cons: "Challenge Actions:"
         }
@@ -145,7 +156,7 @@ App.Coup.players(local: App.Coup.State.local, global: App.Coup.State.global): Li
   case global {
     preparation: []
     game:
-      let list = Map.to_list!(global.players)
+      let list = Map.to_list!(global.status@players)
       for player in list with players:
         let div = 
         <div style = main_style>
@@ -171,7 +182,7 @@ App.Coup.challenge_buttons(local: App.Coup.State.local, global: App.Coup.State.g
   case global {
     preparation: []
     game:
-      for action in global.running_action with cards:
+      for action in global.status@running_action with cards:
         App.Coup.challenge_card(action) & cards
       cards
   }
@@ -224,7 +235,7 @@ App.Coup.action_buttons(local: App.Coup.State.local, global: App.Coup.State.glob
     preparation: 
       [App.Coup.button("start", "start")]
     game:
-      case global.phase {
+      case global.status@phase {
         action:
           [
             App.Coup.button("A-income", "Income")
@@ -236,7 +247,7 @@ App.Coup.action_buttons(local: App.Coup.State.local, global: App.Coup.State.glob
             App.Coup.button("B-exchange", "Ambassador - Exchange")
           ]
         counteraction:
-          case global.running_action as action {
+          case global.status@running_action as action {
             nil: 
               [ <div>"No actions taken yet"</div>]
             cons:
@@ -331,7 +342,8 @@ App.Coup.post.start_game(glob: App.Coup.State.global, deck: App.Coup.Deck, time:
       // Adds Players to the Players List and removes their cards from the Deck
       let {players, deck} = App.Coup.post.start_game.go(deck, 0, players, users)
       let player_list = Map.to_list!(players)
-      App.Coup.State.global.game(deck, players, none, App.Coup.Game.Phase.action, [], 0)
+      let status = App.Coup.Game.new(deck, players, none, App.Coup.Game.Phase.action, [])
+      App.Coup.State.global.game(status, 0 :: U64)
     game: glob
   }
 
