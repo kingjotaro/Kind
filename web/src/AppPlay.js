@@ -284,7 +284,7 @@ module.exports = class AppPlay extends Component {
         if (posts) {
           for (var i = 0; i < posts.length; ++i) {
             var post = posts[i];
-            state = this.app.post(post.tick)(post.room)(post.addr)(post.data)(state);
+            state = this.app.post(BigInt(post.tick))(post.room)(post.addr)(post.data)(state);
             //++count_posts;
           }
         }

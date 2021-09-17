@@ -50,7 +50,7 @@ App.Coup.State: App.state
 App.Coup.init: App.Init<App.Coup.State>
   let user = ""
   let nickname = "nickname"
-  let room = "4b4c494e01212552"
+  let room = "4b4c494e03212552"
   let time = 0
   let users = Map.new<App.Coup.User>
   App.Store.new!(
@@ -326,7 +326,7 @@ App.Coup.post: App.Post<App.Coup.State>
           }
         start_game:
           let deck = App.Coup.Deck.three_each
-          App.Coup.post.start_game(glob, deck, F64.to_nat(U64.to_f64(time)))
+          App.Coup.post.start_game(glob, deck, U64.to_nat(time))
       }
   }
 
