@@ -1,0 +1,71 @@
+// A Kindelia term
+type Kindelia.Term {
+  // A variable
+  var(
+    name: String
+  )
+  // Call external function
+  call(
+    bond: String
+    args: List<Kindelia.Term>
+  )
+  // Assigns a variable
+  let(
+    name: String
+    type: Kindelia.Type
+    expr: Kindelia.Term
+    body: Kindelia.Term
+  )
+  // Creates a value
+  create(
+    ctor: String
+    vals: List<Kindelia.Term>
+  )
+  // Pattern-matches a value
+  match(
+    name: String
+    data: String
+    cses: List<Kindelia.Term>
+  )
+  // Creates a new 64-bit word
+  word(
+    numb: U64
+  )
+  // Compares two words
+  compare(
+    val0: Kindelia.Term
+    val1: Kindelia.Term
+    iflt: Kindelia.Term
+    ifeq: Kindelia.Term
+    ifgt: Kindelia.Term
+  )
+  // Binary operation on words
+  operate(
+    oper: Kindelia.Operation
+    val0: Kindelia.Term
+    val1: Kindelia.Term
+  )
+  // Effect: sets a file
+  set(
+    file: String
+    expr: Kindelia.Term
+    body: Kindelia.Term
+  )
+  // Effect: gets a file
+  get(
+    name: String
+    file: String
+    body: Kindelia.Term
+  )
+  // Effect: chains two effects
+  bind(
+    name: String
+    type: Kindelia.Type
+    expr: Kindelia.Term
+    body: Kindelia.Term
+  )
+  // Effect: wraps a pure value
+  return(
+    expr: Kindelia.Term
+  )
+}

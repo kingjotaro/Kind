@@ -1,0 +1,4 @@
+// A binary operation on words
+type Kindelia.Operation {
+  add sub mul div mod or and xor
+}

@@ -1,0 +1,7 @@
+// A Kindelia transaction
+type Kindelia.Transaction {
+  new_data(data: Kindelia.Data)
+  new_bond(bond: Kindelia.Bond)
+  new_file(file: Kindelia.File)
+  new_eval(eval: Kindelia.Eval)
+}

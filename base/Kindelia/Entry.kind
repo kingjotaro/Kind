@@ -1,0 +1,6 @@
+// A global entry
+type Kindelia.Entry {
+  data(value: Kindelia.Data)
+  bond(value: Kindelia.Bond)
+  file(value: Kindelia.File)
+}

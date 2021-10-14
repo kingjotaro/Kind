@@ -1,0 +1,7 @@
+// A global algebraic datatype (ADT) declaration
+type Kindelia.Data {
+  new(
+    name: String
+    constructors: List<Kindelia.Constructor>
+  )
+}

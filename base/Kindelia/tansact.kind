@@ -1,0 +1,48 @@
+Kindelia.transact(
+  world: Kindelia.World
+  transaction: Kindelia.Transaction
+): Maybe<Pair<Kindelia.World,String>>
+  open world
+  case transaction {
+    new_data:
+      use data = transaction.data
+      case world.entry{data.name} as got_type {
+        none:
+          let world = world@entry <- (world.entry{data.name} <- Kindelia.Entry.data(data))
+          some({world, "[data] " | data.name})
+      } default none
+    new_bond:
+      use bond = transaction.bond
+      case world.entry{bond.name} as got {
+        none:
+          let world = world@entry <- (world.entry{bond.name} <- Kindelia.Entry.bond(bond))
+          let context = Kindelia.extend<Kindelia.Type>({}, bond.inam, bond.ityp)
+          if Kindelia.check(context, world, bond.main, bond.otyp) then
+            some({world, "[bond] " | bond.name})
+          else
+            none
+      } default
+        none
+    new_file:
+      use file = transaction.file
+      case world.entry{file.name} as got {
+        none:
+          let world = world@entry <- (world.entry{file.name} <- Kindelia.Entry.file(file))
+          if Kindelia.check({}, world, file.expr, file.type) then
+            some({world, "[file] " | file.name})
+          else
+            none
+      } default
+        none
+    new_eval:
+      use eval = transaction.eval
+      if Kindelia.check({}, world, eval.term, eval.type) then
+        let fresh = 0
+        let {fresh, term} = Kindelia.sanitize(world, {}, fresh, eval.term)
+        let {world, subst, fresh, gas, term} = case eval.type {
+          effe: Kindelia.normalize(Kindelia.run({world, {}, fresh, 0, term}))
+        } default Kindelia.normalize({world, {}, fresh, 0, term})
+        some({world, "[eval] " | Kindelia.show.term(world, term)})
+      else
+        none
+  }

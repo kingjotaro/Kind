@@ -1,0 +1,42 @@
+// Reduces a term to normal form
+Kindelia.normalize(state: Kindelia.Runtime.Term): Kindelia.Runtime.Term
+  let {world, subst, fresh, gas, term} = Kindelia.reduce(state)
+  //log("- nrm " | Kindelia.show.term(world,term)) // DEBUG
+  //log("- var " | String.join(", ", List.map!!((x) x@fst|":"|Kindelia.show.term(world,x@snd), Map.to_list!(subst)))) // DEBUG
+  //log("")
+  case term {
+    create:
+      let {world, subst, fresh, gas, vals} = Kindelia.normalize.many({world, subst, fresh, gas, term.vals})
+      {world, subst, fresh, gas, Kindelia.Term.create(term.ctor, vals)}
+    match:
+      use ctrs = Kindelia.get_constructors(world, term.data) abort {world, subst, fresh, gas, term}
+      let {world, subst, fresh, gas, cses} = Kindelia.normalize.cases(ctrs, term.name, {world, subst, fresh, gas, term.cses})
+      {world, subst, fresh, gas, Kindelia.Term.match(term.name, term.data, cses)}
+    compare:
+      let {world, subst, fresh, gas, val0} = Kindelia.normalize({world, subst, fresh, gas, term.val0})
+      let {world, subst, fresh, gas, val1} = Kindelia.normalize({world, subst, fresh, gas, term.val1})
+      let {world, subst, fresh, gas, iflt} = Kindelia.normalize({world, subst, fresh, gas, term.iflt})
+      let {world, subst, fresh, gas, ifeq} = Kindelia.normalize({world, subst, fresh, gas, term.ifeq})
+      let {world, subst, fresh, gas, ifgt} = Kindelia.normalize({world, subst, fresh, gas, term.ifgt})
+      {world, subst, fresh, gas, Kindelia.Term.compare(val0, val1, iflt, ifeq, ifgt)}
+    operate:
+      let {world, subst, fresh, gas, val0} = Kindelia.normalize({world, subst, fresh, gas, term.val0})
+      let {world, subst, fresh, gas, val1} = Kindelia.normalize({world, subst, fresh, gas, term.val1})
+      {world, subst, fresh, gas, Kindelia.Term.operate(term.oper, val0, val1)}
+    set:
+      use file = Kindelia.get_file(world, term.file) abort state
+      let {world, subst, fresh, gas, expr} = Kindelia.normalize({world, subst, fresh, gas, term.expr})
+      let {world, subst, fresh, gas, body} = Kindelia.normalize({world, subst, fresh, gas, term.body})
+      {world, subst, fresh, gas, Kindelia.Term.set(term.file, expr, body)}
+    get:
+      use file = Kindelia.get_file(world, term.file) abort state
+      let {world, subst, fresh, gas, body} = Kindelia.normalize({world, subst{term.name} <- Kindelia.Term.var(term.name), fresh, gas, term.body})
+      {world, subst, fresh, gas, Kindelia.Term.get(term.name, term.file, body)}
+    bind:
+      let {world, subst, fresh, gas, expr} = Kindelia.normalize({world, subst, fresh, gas, term.expr})
+      let {world, subst, fresh, gas, body} = Kindelia.normalize({world, subst{term.name} <- Kindelia.Term.var(term.name), fresh, gas, term.body})
+      {world, subst, fresh, gas, Kindelia.Term.bind(term.name, term.type, expr, body)}
+    return:
+      let {world, subst, fresh, gas, expr} = Kindelia.normalize({world, subst, fresh, gas, term.expr})
+      {world, subst, fresh, gas, Kindelia.Term.return(expr)}
+  } default {world, subst, fresh, gas, term}

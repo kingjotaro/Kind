@@ -1,0 +1,9 @@
+// A global state
+type Kindelia.File {
+  new(
+    name: String
+    ownr: List<String>
+    type: Kindelia.Type
+    expr: Kindelia.Term
+  )
+}

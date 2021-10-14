@@ -1,0 +1,22 @@
+// Runs an effect
+Kindelia.run(state: Kindelia.Runtime.Term): Kindelia.Runtime.Term
+  let {world, subst, fresh, gas, term} = Kindelia.reduce(state)
+  case term {
+    set:
+      use file = Kindelia.get_file(world, term.file) abort state
+      let {world, subst, fresh, gas, expr} = Kindelia.normalize({world, subst, fresh, gas, term.expr})
+      let new_entry = Kindelia.Entry.file(file@expr <- expr)
+      let new_world = world@entry <- (world@entry{term.file} <- new_entry)
+      //log("-- rebind " | term.name)
+      //log("--- from: " | Kindelia.show.term(world, bond.main))
+      //log("--- to..: " | Kindelia.show.term(world, main))
+      Kindelia.run({new_world, subst, fresh, gas, term.body})
+    get:
+      use file = Kindelia.get_file(world, term.file) abort state
+      Kindelia.run({world, subst{term.name} <- file.expr, fresh, gas, term.body})
+    bind:
+      let {world, subst, fresh, gas, expr} = Kindelia.run({world, subst, fresh, gas, term.expr})
+      case expr {
+        return: Kindelia.run({world, subst{term.name} <- expr.expr, fresh, gas, term.body})
+      } default {world, subst, fresh, gas, Kindelia.Term.bind(term.name, term.type, expr, term.body)}
+  } default {world, subst, fresh, gas, term}

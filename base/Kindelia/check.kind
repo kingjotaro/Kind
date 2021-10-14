@@ -1,0 +1,90 @@
+Kindelia.check(
+  context: Map<Kindelia.Type>
+  world: Kindelia.World
+  term: Kindelia.Term
+  type: Kindelia.Type
+): Bool
+  open context
+  open world
+  //log("-- chk " | Kindelia.show.term(world,term) | " : " | Kindelia.show.type(world,type))
+  //log("-- ctx: " | String.join(", ", List.map!!((a) a@fst|":"|Kindelia.show.type(world,a@snd), Map.to_list!(context))))  // DEBUG
+  //log("")  // DEBUG
+  case term {
+    var:
+      let var_type = context{term.name} abort false
+      ////log("-- var " | term.name | " " | Kindelia.show.type(var_type) | " " | Kindelia.show.type(world,type))  // DEBUG
+      Kindelia.equal(var_type, type)
+    let:
+      //log("-- let ")  // DEBUG
+      let expr = Kindelia.check(context, world, term.expr, term.type)
+      let ctx2 = context{term.name} <- term.type
+      let body = Kindelia.check(ctx2, world, term.body, type)
+      expr && body
+    call:
+      //log("-- call ")  // DEBUG
+      //let ownr = Kindelia.World.check.owner(context, term.func)
+      use bond = Kindelia.get_bond(world, term.bond) abort false
+      let otyp = Kindelia.equal(bond.otyp, type)
+      let args = List.zip!!(term.args, bond.ityp)
+      let args = List.all!((x) Kindelia.check(context, world, x@fst, x@snd), args)
+      otyp && args
+    create: case type {
+      data:
+        use data = Kindelia.get_data(world, type.name) abort false
+        use ctor = Kindelia.get_constructor_value(data,term.ctor) abort false
+        let size = Nat.eql(List.length!(term.vals), List.length!(ctor.ftyp))
+        let vals = List.zip!!(term.vals, ctor.ftyp)
+        let vals = List.all!((x) Kindelia.check(context, world, x@fst, x@snd), vals)
+        size && vals
+    } default false
+    match: 
+      use data = Kindelia.get_data(world, term.data) abort false
+      let size = Nat.eql(List.length!(term.cses),List.length!(data.constructors))
+      let expr = Kindelia.check(context, world, Kindelia.Term.var(term.name), Kindelia.Type.data(term.data))
+      let cses = List.zipped_with!!(term.cses, data.constructors)!((case_body, case_ctor)
+        let nams = List.map!!(String.concat(term.name|"."), case_ctor@fnam)
+        let typs = case_ctor@ftyp
+        let ctx2 = Kindelia.extend!(context, nams, typs)
+        Kindelia.check(ctx2, world, case_body, type))
+      size && List.and(cses)
+    word: case type {
+      word: true
+    } default false
+    compare:
+      //log("-- compare ")  // DEBUG
+      let val0 = Kindelia.check(context, world, term.val0, Kindelia.Type.word)
+      let val1 = Kindelia.check(context, world, term.val1, Kindelia.Type.word)
+      let iflt = Kindelia.check(context, world, term.iflt, type)
+      let ifeq = Kindelia.check(context, world, term.ifeq, type)
+      let ifgt = Kindelia.check(context, world, term.ifgt, type)
+      val0 && val1 && iflt && ifeq && ifgt
+    operate:
+      let val0 = Kindelia.check(context, world, term.val0, Kindelia.Type.word)
+      let val1 = Kindelia.check(context, world, term.val1, Kindelia.Type.word)
+      val0 && val1
+    set: case type {
+      effe: 
+        use file = Kindelia.get_file(world, term.file) abort false
+        // let ownr = Kindelia.check_owner(context, term.file)  // TODO check owner
+        let expr = Kindelia.check(context, world, term.expr, file.type)
+        let body = Kindelia.check(context, world, term.body, type)
+        expr && body
+    } default false
+    get: case type {
+      effe: 
+        use file = Kindelia.get_file(world, term.file) abort false
+        let ctx2 = Kindelia.extend!(context, [term.name], [file.type])
+        let body = Kindelia.check(ctx2, world, term.body, type)
+        body
+    } default false
+    bind: case type {
+      effe:
+        let expr = Kindelia.check(context, world, term.expr, Kindelia.Type.effe(term.type))
+        let ctx2 = context{term.name} <- term.type
+        let body = Kindelia.check(ctx2, world, term.body, type)
+        expr && body
+    } default false
+    return: case type {
+      effe: Kindelia.check(context, world, term.expr, type.rety)
+    } default false
+  } default false

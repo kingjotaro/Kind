@@ -1,0 +1,796 @@
+// Kindelia: a minimal decentralized computer
+// ==========================================
+
+// Types
+// -----
+
+// A Kindelia term
+// Kindelia.Term
+
+// A binary operation on words
+// Kindelia.Operation
+
+// A type reference
+// Kindelia.Type
+
+// A global algebraic datatype (ADT) declaration
+// Kindelia.Data
+
+// An ADT's constructor
+// Kindelia.Constructor
+
+// A global function
+// Kindelia.Bond
+
+// A global state
+// Kindelia.File 
+
+// An evaluation
+// Kindelia.Eval
+
+// A global entry
+// Kindelia.Entry
+
+// A Kindelia transaction
+// Kindelia.transaction
+
+// Kindelia.World
+
+// Kindelia.Runtime
+
+// Utils
+// -----
+
+Kindelia.genesis: Kindelia.World
+  Kindelia.World.new({})
+
+Kindelia.get_data(world: Kindelia.World, name: String): Maybe<Kindelia.Data>
+  open world
+  Maybe {
+    get entry = world.entry{name}
+    case entry {
+      data: some(entry.value)
+    } default none
+  }
+
+Kindelia.get_bond(world: Kindelia.World, name: String): Maybe<Kindelia.Bond>
+  open world
+  Maybe {
+    get entry = world.entry{name}
+    case entry {
+      bond: some(entry.value)
+    } default none
+  }
+
+Kindelia.get_file(world: Kindelia.World, name: String): Maybe<Kindelia.File>
+  open world
+  Maybe {
+    get entry = world.entry{name}
+    case entry {
+      file: some(entry.value)
+    } default none
+  }
+
+Kindelia.get_constructors(world: Kindelia.World, name: String): Maybe<List<Kindelia.Constructor>>
+  case Kindelia.get_data(world, name) as got {
+    none: none
+    some: some(got.value@constructors)
+  }
+
+Kindelia.get_constructor_index(data: Kindelia.Data, name: String): Maybe<Nat>
+  Maybe.mapped!(List.ifind!((i,ctr) String.eql(ctr@name,name), data@constructors))!((x) x@fst)
+
+Kindelia.get_constructor_value(data: Kindelia.Data, name: String): Maybe<Kindelia.Constructor>
+  Maybe.mapped!(List.ifind!((i,ctr) String.eql(ctr@name,name), data@constructors))!((x) x@snd)
+
+Kindelia.extend<A: Type>(
+  map: Map<A>
+  keys: List<String>
+  vals: List<A>
+): Map<A>
+  case keys vals {
+    cons cons: Kindelia.extend<A>(map{keys.head} <- vals.head, keys.tail, vals.tail)
+  } default map
+
+// Type-Checking
+// -------------
+
+Kindelia.equal(a: Kindelia.Type, b: Kindelia.Type): Bool
+  case a b {
+    word word: true
+    data data: String.eql(a.name, b.name)
+    effe effe: Kindelia.equal(a.rety, b.rety)
+  } default false
+
+// Evaluation
+// ----------
+
+Kindelia.normalize.bound(names: List<String>, state: Kindelia.Runtime.Term): Kindelia.Runtime.Term
+  let {world, subst, fresh, gas, term} = state
+  let subst = Kindelia.extend!(subst, names, List.map!!(Kindelia.Term.var,names))
+  Kindelia.normalize({world, subst, fresh, gas, term})
+
+Kindelia.normalize.cases(ctrs: List<Kindelia.Constructor>, name: String, state: Kindelia.Runtime.Terms): Kindelia.Runtime.Terms
+  let {world, subst, fresh, gas, cses} = state
+  case ctrs cses {
+    nil nil:
+      state
+    cons cons:
+      let nams = List.map!!(String.concat(name|"."), ctrs.head@fnam)
+      let vals = List.map!!(Kindelia.Term.var, nams)
+      let subst = Kindelia.extend!(subst, nams, vals)
+      let {world, subst, fresh, gas, head} = Kindelia.normalize({world, subst, fresh, gas, cses.head})
+      let {world, subst, fresh, gas, tail} = Kindelia.normalize.cases(ctrs.tail, name, {world, subst, fresh, gas, cses.tail})
+      {world, subst, fresh, gas, head & tail}
+  } default state
+
+Kindelia.normalize.many(state: Kindelia.Runtime.Terms): Kindelia.Runtime.Terms
+  let {world, subst, fresh, gas, vals} = state
+  case vals {
+    nil:
+      state
+    cons:
+      let {world, subst, fresh, gas, head} = Kindelia.normalize({world, subst, fresh, gas, vals.head})
+      let {world, subst, fresh, gas, tail} = Kindelia.normalize.many({world, subst, fresh, gas, vals.tail})
+      {world, subst, fresh, gas, head & tail}
+  }
+
+// Generates a new name to replace old_name
+Kindelia.rename(table: Map<String>, fresh: Nat, old_name: String): Triple<Map<String>, Nat, String>
+    let new_name = "$" | Nat.show(fresh)
+    let table = table{old_name} <- new_name
+    let fresh = Nat.succ(fresh)
+    {table, fresh, new_name}
+
+Kindelia.rename.many(table: Map<String>, fresh: Nat, names: List<String>): Triple<Map<String>, Nat, List<String>>
+  case names {
+    nil:
+      {table, fresh, []}
+    cons:
+      let {table, fresh, head} = Kindelia.rename(table, fresh, names.head)
+      let {table, fresh, tail} = Kindelia.rename.many(table, fresh, names.tail)
+      {table, fresh, head & tail}
+  }
+
+// Transaction
+// -----------
+
+
+// Serialization
+// -------------
+
+
+
+
+// Stringification
+// ---------------
+
+Kindelia.show.term(
+  world: Kindelia.World
+  term: Kindelia.Term
+): String
+  case term {
+    var:
+      term.name
+    let:
+      let name = term.name
+      let type = Kindelia.show.type(world, term.type)
+      let expr = Kindelia.show.term(world, term.expr)
+      let body = Kindelia.show.term(world, term.body)
+      "let " | name | " : " | type | " = " | expr | " " | body
+    create:
+      let vals = List.mapped!(term.vals)!(Kindelia.show.term(world))
+      term.ctor | "{" | String.join(",",vals) | "}"
+    match:
+      use data = Kindelia.get_data(world, term.data) abort "?"
+      let name = term.name
+      let cses = List.zipped_with!!(data.constructors, term.cses)!((case_ctor, case_body)
+        case_ctor@name | ": " | Kindelia.show.term(world, case_body))
+      "case " | name | " : " | term.data | " { " | String.join(", ", cses) | " }"
+    word:
+      "#" | U64.show(term.numb)
+    compare:
+      let val0 = Kindelia.show.term(world, term.val0)
+      let val1 = Kindelia.show.term(world, term.val1)
+      let iflt = Kindelia.show.term(world, term.iflt)
+      let ifeq = Kindelia.show.term(world, term.ifeq)
+      let ifgt = Kindelia.show.term(world, term.ifgt)
+      "compare " | val0 | " " | val1 | " { _<_: " | iflt | " _=_: " | ifeq | " _>_: " | ifgt | " }"
+    operate:
+      let oper = case term.oper { add: "+", sub: "-", mul: "*", div: "/", mod: "%", or: "|", and: "&", xor: "^" }
+      let val0 = Kindelia.show.term(world, term.val0)
+      let val1 = Kindelia.show.term(world, term.val1)
+      oper | "(" | val0 | "," | val1 | ")"
+    call:
+      let bond = term.bond
+      let args = List.map!!(Kindelia.show.term(world), term.args)
+      bond | "(" | String.join(",", args) | ")"
+    set:
+      let file = term.file
+      let expr = Kindelia.show.term(world, term.expr)
+      let body = Kindelia.show.term(world, term.body)
+      "set " | file | " = " | expr | "; " | body
+    get:
+      let file = term.file
+      let name = term.name
+      let body = Kindelia.show.term(world, term.body)
+      "get " | name | " = " | file | "; " | body
+    bind:
+      let name = term.name
+      let type = Kindelia.show.type(world, term.type)
+      let expr = Kindelia.show.term(world, term.expr)
+      let body = Kindelia.show.term(world, term.body)
+      if String.is_empty(name) then
+        "run " | expr | "; " | body
+      else
+        "run " | name | " : " | type | " = " | expr | "; " | body
+    return:
+      let expr = Kindelia.show.term(world, term.expr)
+      "return " | expr
+  }
+
+Kindelia.show.type(
+  world: Kindelia.World
+  type: Kindelia.Type
+): String
+  case type {
+    word: "#word"
+    data: type.name
+    effe: "& " | Kindelia.show.type(world,type.rety)
+  }
+
+Kindelia.show.data(
+  world: Kindelia.World
+  data: Kindelia.Data
+): String
+  open data
+  "data " | data.name | " { "
+  | String.join(", ", List.mapped!(data.constructors)!((Kindelia.show.constructor(world))))
+  | " }"
+
+Kindelia.show.constructor(
+  world: Kindelia.World
+  constructor: Kindelia.Constructor
+): String
+  open constructor
+  let names = constructor.fnam
+  let types = List.mapped!(constructor.ftyp)!(Kindelia.show.type(world))
+  let fields = List.zip_with!!!((name,type) name | ": " | type, names, types)
+  constructor.name | "{" | String.join(", ", fields) | "}"
+
+Kindelia.show.bond(
+  world: Kindelia.World
+  bond: Kindelia.Bond
+): String
+  open bond
+  "bond "
+  | bond.name
+  | "("
+  | String.join(",",List.zipped_with!!(bond.inam,bond.ityp)!((name,type) name|": "|Kindelia.show.type(world,type)))
+  | "): "
+  | Kindelia.show.type(world,bond.otyp)
+  | " { "
+  | Kindelia.show.term(world,bond.main)
+  | " }"
+
+Kindelia.show.file(
+  world: Kindelia.World
+  file: Kindelia.File
+): String
+  open file
+  "file "
+  | String.join(" ", List.map!!((x) x|"@", file.ownr))
+  | file.name
+  | " : "
+  | Kindelia.show.type(world,file.type)
+  | " = "
+  | Kindelia.show.term(world,file.expr)
+
+Kindelia.show.entry(
+  world: Kindelia.World
+  entry: Kindelia.Entry
+): String
+  case entry {
+    data: Kindelia.show.data(world, entry.value)
+    bond: Kindelia.show.bond(world, entry.value)
+    file: Kindelia.show.file(world, entry.value)
+  } | "\n"
+
+Kindelia.show.eval(
+  world: Kindelia.World
+  eval: Kindelia.Eval
+): String
+  open eval
+  let term = Kindelia.show.term(world, eval.term)
+  let type = Kindelia.show.type(world, eval.type)
+  "eval {" | term | "} : " | type
+
+Kindelia.show.transaction(
+  world: Kindelia.World
+  transaction: Kindelia.Transaction
+): String
+  case transaction {
+    new_data: Kindelia.show.data(world, transaction.data)
+    new_bond: Kindelia.show.bond(world, transaction.bond)
+    new_file: Kindelia.show.file(world, transaction.file)
+    new_eval: Kindelia.show.eval(world, transaction.eval)
+  }
+
+Kindelia.show.block(
+  world: Kindelia.World
+  block: List<Kindelia.Transaction>
+): String
+  case block {
+    nil:
+      ""
+    cons:
+      let head = Kindelia.show.transaction(world, block.head)
+      let tail = Kindelia.show.block(world, block.tail)
+      "- " | head | "\n" | tail
+  }
+
+// Parsing
+// -------
+
+Kindelia.parse.ignore: Parser(List<Unit>)
+ Parser.many!(Parser.choice!([
+   Parser.text(" ")
+   Parser.text("\t")
+   Parser.text("\r")
+   Parser.text("\n")
+   Parser {
+     Parser.text("//")
+     let end = Parser.choice!([Parser.text("\n"), Parser.eof])
+     Parser.until!(end, Parser.one)
+     return unit
+   }
+ ]))
+
+Kindelia.parse.text(text: String): Parser(Unit)
+  Parser {
+    Kindelia.parse.ignore
+    Parser.text(text)
+  }
+
+Kindelia.parse.name: Parser<String>
+ Parser {
+   Kindelia.parse.ignore
+   get fst_chr = Kindelia.parse.letter
+   get chrs = Parser.many<Kind.Letter>(Kindelia.parse.letter)
+   return String.cons(fst_chr, List.fold!(chrs)!(String.nil, String.cons))
+ }
+
+Kindelia.parse.letter: Parser<Char>
+  Parser.letter((chr)
+    if      U16.btw('A', chr, 'Z') then Bool.true
+    else if U16.btw('a', chr, 'z') then Bool.true
+    else if U16.btw('0', chr, '9') then Bool.true
+    else if U16.eql('.', chr)      then Bool.true
+    else if U16.eql('_', chr)      then Bool.true
+    else if U16.eql('^', chr)      then Bool.true
+    else                                Bool.false)
+
+Kindelia.parse.term(world: Kindelia.World): Parser<Kindelia.Term>
+ Parser.choice!([
+    Kindelia.parse.term.let(world)
+    Kindelia.parse.term.create(world)
+    Kindelia.parse.term.match(world)
+    Kindelia.parse.term.word(world)
+    Kindelia.parse.term.compare(world)
+    Kindelia.parse.term.operate(world)
+    Kindelia.parse.term.set(world)
+    Kindelia.parse.term.get(world)
+    Kindelia.parse.term.bind(world)
+    Kindelia.parse.term.return(world)
+    Kindelia.parse.term.call(world)
+    Kindelia.parse.term.var(world)
+ ])
+
+Kindelia.parse.term.let(world: Kindelia.World): Parser<Kindelia.Term>
+  Parser {
+    Kindelia.parse.text("let")
+    get name = Kindelia.parse.name
+    Kindelia.parse.text(":")
+    get type = Kindelia.parse.type(world)
+    Kindelia.parse.text("=")
+    get expr = Kindelia.parse.term(world)
+    Parser.maybe!(Kindelia.parse.text(";"))
+    get body = Kindelia.parse.term(world)
+    return Kindelia.Term.let(name, type, expr, body)
+ }
+
+Kindelia.parse.term.create(world: Kindelia.World): Parser<Kindelia.Term>
+  Parser {
+    get ctor = Kindelia.parse.name
+    get vals = Parser.wrap!(
+      Kindelia.parse.text("{")
+      Parser {
+        get val = Kindelia.parse.term(world)
+        Parser.maybe!(Kindelia.parse.text(","))
+        return val
+      }
+      Kindelia.parse.text("}"))
+    return Kindelia.Term.create(ctor, vals)
+ }
+
+Kindelia.parse.term.match(world: Kindelia.World): Parser<Kindelia.Term>
+  Parser {
+    Kindelia.parse.text("case ")
+    get name = Kindelia.parse.name
+    Kindelia.parse.text(":")
+    get data_name = Kindelia.parse.name
+    case Kindelia.get_data(world, data_name) as found {
+      none: Parser.fail!("Type not found.")
+      some: Parser {
+        use data = found.value
+        Kindelia.parse.text("{")
+        get cses = Kindelia.parse.term.match.cases(world, data.constructors)
+        Kindelia.parse.text("}")
+        return Kindelia.Term.match(name, data_name, cses)
+      }
+    }
+  }
+
+Kindelia.parse.term.match.cases(
+  world: Kindelia.World
+  constructors: List<Kindelia.Constructor>
+): Parser<List<Kindelia.Term>>
+ case constructors {
+   nil: Parser {
+     return []
+   }
+   cons: Parser {
+     use ctor = constructors.head
+     Kindelia.parse.text(ctor.name)
+     Kindelia.parse.text(":")
+     get head = Kindelia.parse.term(world)
+     Parser.maybe!(Kindelia.parse.text(","))
+     get tail = Kindelia.parse.term.match.cases(world, constructors.tail)
+     return head & tail
+   }
+ }
+
+Kindelia.parse.term.word(world: Kindelia.World): Parser<Kindelia.Term>
+  Parser {
+    Kindelia.parse.text("#")
+    get num = Parser.nat
+    if Nat.gte(num,Nat.pow(2,64)) then
+      Parser.fail!("Number out of bound")
+    else Parser {
+      return Kindelia.Term.word(Nat.to_u64(num))
+    }
+  }
+
+Kindelia.parse.term.compare(world: Kindelia.World): Parser<Kindelia.Term>
+  Parser {
+    Kindelia.parse.text("compare")
+    get val0 = Kindelia.parse.term(world)
+    get val1 = Kindelia.parse.term(world)
+    Kindelia.parse.text("{")
+    Kindelia.parse.text("_<_:")
+    get iflt = Kindelia.parse.term(world)
+    Kindelia.parse.text("_=_:")
+    get ifeq = Kindelia.parse.term(world)
+    Kindelia.parse.text("_>_:")
+    get ifgt = Kindelia.parse.term(world)
+    Kindelia.parse.text("}")
+    return Kindelia.Term.compare(val0, val1, iflt, ifeq, ifgt)
+  }
+
+Kindelia.parse.term.operate(world: Kindelia.World): Parser<Kindelia.Term>
+  Parser {
+    get oper = Kindelia.parse.term.operation
+    case oper {
+      none: Parser.fail!("Not an operation.")
+      some: Parser {
+        Kindelia.parse.text("(")
+        get val0 = Kindelia.parse.term(world)
+        Parser.maybe!(Kindelia.parse.text(","))
+        get val1 = Kindelia.parse.term(world)
+        Kindelia.parse.text(")")
+        return Kindelia.Term.operate(oper.value, val0, val1)
+      }
+    }
+  }
+
+Kindelia.parse.term.operation: Parser<Maybe<Kindelia.Operation>>
+  Parser.choice!([
+    Parser {
+      Kindelia.parse.text("+")
+      return some(Kindelia.Operation.add)
+    }
+    Parser {
+      Kindelia.parse.text("-")
+      return some(Kindelia.Operation.sub)
+    }
+    Parser {
+      Kindelia.parse.text("*")
+      return some(Kindelia.Operation.mul)
+    }
+    Parser {
+      Kindelia.parse.text("/")
+      return some(Kindelia.Operation.div)
+    }
+    Parser {
+      Kindelia.parse.text("%")
+      return some(Kindelia.Operation.mod)
+    }
+    Parser {
+      Kindelia.parse.text("|")
+      return some(Kindelia.Operation.or)
+    }
+    Parser {
+      Kindelia.parse.text("&")
+      return some(Kindelia.Operation.and)
+    }
+    Parser {
+      Kindelia.parse.text("^")
+      return some(Kindelia.Operation.xor)
+    }
+    Parser {
+      return none
+    }
+  ])
+
+Kindelia.parse.term.bind(world: Kindelia.World): Parser<Kindelia.Term>
+  Parser.choice!([
+    Parser {
+      Kindelia.parse.text("run")
+      get name = Kindelia.parse.name
+      Kindelia.parse.text(":")
+      get type = Kindelia.parse.type(world)
+      Kindelia.parse.text("=")
+      get expr = Kindelia.parse.term(world)
+      Parser.maybe!(Kindelia.parse.text(";"))
+      get body = Kindelia.parse.term(world)
+      return Kindelia.Term.bind(name, type, expr, body)
+    }
+    Parser {
+      Kindelia.parse.text("run")
+      get expr = Kindelia.parse.term(world)
+      Parser.maybe!(Kindelia.parse.text(";"))
+      get body = Kindelia.parse.term(world)
+      return Kindelia.Term.bind("", Kindelia.Type.word, expr, body)
+    }
+  ])
+
+Kindelia.parse.term.set(world: Kindelia.World): Parser<Kindelia.Term>
+  Parser {
+    Kindelia.parse.text("set")
+    get bond = Kindelia.parse.name
+    Kindelia.parse.text("=")
+    get main = Kindelia.parse.term(world)
+    Parser.maybe!(Kindelia.parse.text(";"))
+    get body = Kindelia.parse.term(world)
+    return Kindelia.Term.set(bond, main, body)
+  }
+
+Kindelia.parse.term.get(world: Kindelia.World): Parser<Kindelia.Term>
+  Parser {
+    Kindelia.parse.text("get")
+    get name = Kindelia.parse.name
+    Kindelia.parse.text("=")
+    get file = Kindelia.parse.name
+    Parser.maybe!(Kindelia.parse.text(";"))
+    get body = Kindelia.parse.term(world)
+    return Kindelia.Term.get(name, file, body)
+  }
+
+Kindelia.parse.term.return(world: Kindelia.World): Parser<Kindelia.Term>
+  Parser {
+    Kindelia.parse.text("return")
+    get expr = Kindelia.parse.term(world)
+    return Kindelia.Term.return(expr)
+  }
+
+Kindelia.parse.term.call(world: Kindelia.World): Parser<Kindelia.Term>
+  Parser {
+    get ctor = Kindelia.parse.name
+    get args = Parser.wrap!(
+      Kindelia.parse.text("(")
+      Parser {
+        get val = Kindelia.parse.term(world)
+        Parser.maybe!(Kindelia.parse.text(","))
+        return val
+      }
+      Kindelia.parse.text(")"))
+    return Kindelia.Term.call(ctor, args)
+ }
+
+Kindelia.parse.term.var(
+  world: Kindelia.World
+): Parser<Kindelia.Term>
+ Parser {
+   get name = Kindelia.parse.name
+   return Kindelia.Term.var(name)
+ }
+
+Kindelia.parse.type(
+  world: Kindelia.World
+): Parser<Kindelia.Type>
+  Parser.choice!([
+    Parser {
+      Kindelia.parse.text("&")
+      get rety = Kindelia.parse.type(world)
+      return Kindelia.Type.effe(rety)
+    }
+    Parser {
+      Kindelia.parse.text("#word")
+      return Kindelia.Type.word
+    }
+    Parser {
+      get name = Kindelia.parse.name
+      return Kindelia.Type.data(name)
+    }
+  ])
+
+Kindelia.parse.data(world: Kindelia.World): Parser<Kindelia.Data>
+  Parser {
+    Kindelia.parse.text("type")
+    get name = Kindelia.parse.name
+    get ctors = Parser.wrap!(
+      Kindelia.parse.text("{")
+      Parser {
+        get val = Kindelia.parse.constructor(world)
+        Parser.maybe!(Kindelia.parse.text(","))
+        return val
+      }
+      Kindelia.parse.text("}")
+    )
+    return Kindelia.Data.new(name, ctors)
+  }
+  
+Kindelia.parse.constructor(world: Kindelia.World): Parser<Kindelia.Constructor>
+ Parser {
+   get name = Kindelia.parse.name
+   get fields = Parser.wrap!(
+      Kindelia.parse.text("{")
+      Kindelia.parse.ann(world)
+      Kindelia.parse.text("}"))
+   let nams = List.mapped!(fields)!((x) x@fst)
+   let typs = List.mapped!(fields)!((x) x@snd)
+   return Kindelia.Constructor.new(name, nams, typs)
+ }
+
+Kindelia.parse.bond(world: Kindelia.World): Parser<Kindelia.Bond>
+  Parser {
+    Kindelia.parse.text("bond")
+    get name = Kindelia.parse.name
+    get args = Parser.wrap!(
+      Kindelia.parse.text("(")
+      Kindelia.parse.ann(world)
+      Kindelia.parse.text(")"))
+    let iarg = List.mapped!(args)!((x) x@fst)
+    let ityp = List.mapped!(args)!((x) x@snd)
+    Kindelia.parse.text(":")
+    get otyp = Kindelia.parse.type(world)
+    Kindelia.parse.text("{")
+    get main = Kindelia.parse.term(world)
+    Kindelia.parse.text("}")
+    return Kindelia.Bond.new(name, iarg, ityp, otyp, main)
+  }
+
+Kindelia.parse.file(world: Kindelia.World): Parser<Kindelia.File>
+  Parser {
+    Kindelia.parse.text("file")
+    get ownr = Parser.many!(Parser {
+      get name = Kindelia.parse.name
+      Kindelia.parse.text("@")
+      return name
+    })
+    get name = Kindelia.parse.name
+    Kindelia.parse.text(":")
+    get type = Kindelia.parse.type(world)
+    Kindelia.parse.text("=")
+    get expr = Kindelia.parse.term(world)
+    return Kindelia.File.new(name, ownr, type, expr)
+  }
+
+Kindelia.parse.ann(world: Kindelia.World): Parser<Pair<String,Kindelia.Type>>
+ Parser {
+    Parser.maybe!(Kindelia.parse.text(","))
+    get name = Kindelia.parse.name
+    Kindelia.parse.text(":")
+    get type = Kindelia.parse.type(world)
+    return {name, type}
+ }
+
+Kindelia.parse.eval(world: Kindelia.World): Parser<Kindelia.Eval>
+  Parser {
+    Kindelia.parse.text("eval")
+    Kindelia.parse.text("{")
+    get term = Kindelia.parse.term(world)
+    Kindelia.parse.text("}")
+    Kindelia.parse.text(":")
+    get type = Kindelia.parse.type(world)
+    return Kindelia.Eval.new(term, type)
+  }
+
+Kindelia.parse.transaction(world: Kindelia.World): Parser<Kindelia.Transaction>
+  Parser.choice!([
+    Parser {
+      get data = Kindelia.parse.data(world)
+      return Kindelia.Transaction.new_data(data)
+    }
+    Parser {
+      get bond = Kindelia.parse.bond(world)
+      return Kindelia.Transaction.new_bond(bond)
+    }
+    Parser {
+      get file = Kindelia.parse.file(world)
+      return Kindelia.Transaction.new_file(file)
+    }
+    Parser {
+      get term = Kindelia.parse.eval(world)
+      return Kindelia.Transaction.new_eval(term)
+    }
+  ])
+
+Kindelia.parse.block(world: Kindelia.World): Parser<List<Kindelia.Transaction>>
+  Parser.until!(Kindelia.parse.text("save"), Kindelia.parse.transaction(world))
+
+// API
+// ---
+//
+//Kindelia.api.run(code: String): IO<Unit>
+//  Kindelia.api.run.go(Kindelia.genesis, 0, code)
+//
+//Kindelia.api.run.go(
+//  world: Kindelia.World
+//  block_number: Nat
+//  code: String
+//): IO<Unit>
+//  let parsed = Kindelia.parse.block(world, Parser.State.new(none, "", 0, 0, code))
+//  case parsed {
+//    error: IO {
+//      open parsed.err
+//      if Nat.ltn(parsed.err.idx, String.length(code)) then IO {
+//        let err = parsed.err.msg | (case parsed.err.nam { nil: "", cons: " Inside " | parsed.err.nam | ":" })
+//        let hig = Kind.Code.highlight(code, parsed.err.ini, parsed.err.idx, Nat.succ(parsed.err.idx))
+//        let str = String.flatten([err, "\n", hig])
+//        IO.print("Error parsing block #" | Nat.show(block_number))
+//        IO.print(str)
+//      } else IO {
+//        IO.print("Done.")
+//      }
+//    }
+//    value: IO {
+//      let block = parsed.val
+//      IO.print("Block #" | Nat.show(block_number))
+//      let bits_0 = Kindelia.serialize.block(world, block)
+//      let bits_1 = Kindelia.serialize.block(world, Kindelia.deserialize.block(world, bits_0)@snd)
+//      IO.print("$ " | Bits.hex.encode(bits_0) | " " | if Bits.eql(bits_0,bits_1) then "ok" else "bad_serialization")
+//      Kindelia.api.run.go.transactions(world, block_number, parsed.pst@str, block)
+//    }
+//  }
+//
+//Kindelia.api.run.go.transactions(
+//  world: Kindelia.World
+//  block_number: Nat
+//  code: String
+//  transactions: List<Kindelia.Transaction>
+//): IO<Unit>
+//  case transactions {
+//    nil: IO {
+//      IO.print("")
+//      Kindelia.api.run.go(world, Nat.succ(block_number), code)
+//    }
+//    cons: case Kindelia.transact(world, transactions.head) as result {
+//      none: IO {
+//        IO.print("- [fail]")
+//        Kindelia.api.run.go.transactions(world, block_number, code, transactions.tail)
+//      }
+//      some: IO {
+//        let {world, message} = result.value
+//        IO.print("- " | message)
+//        Kindelia.api.run.go.transactions(world, block_number, code, transactions.tail)
+//      }
+//    }
+//  }
+//
+//Kindelia: _
+//  IO {
+//    let x = Kindelia.api.run
+//    return unit
+//  }
+//

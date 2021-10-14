@@ -1,0 +1,8 @@
+// An ADT's constructor
+type Kindelia.Constructor {
+  new(
+    name: String
+    fnam: List<String>
+    ftyp: List<Kindelia.Type>
+  )
+}

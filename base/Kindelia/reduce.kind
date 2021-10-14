@@ -1,0 +1,58 @@
+// Reduces a pure term to weak normal form
+Kindelia.reduce(state: Kindelia.Runtime.Term): Kindelia.Runtime.Term
+  let {world, subst, fresh, gas, term} = state
+  //log("-- run " | Kindelia.show.term(world,term)) // DEBUG
+  //log("-- var " | String.join(", ", List.map!!((x) x@fst|":"|Kindelia.show.term(world,x@snd), Map.to_list!(subst)))) // DEBUG
+  //log("")
+  case term {
+    var:
+      let term = subst{term.name} <> term
+      let {world, subst, fresh, gas, term} = Kindelia.reduce({world, subst, fresh, gas, term})
+      {world, subst{term.name} <- term, fresh, gas, term}
+    let:
+      Kindelia.reduce({world, subst{term.name} <- term.expr, fresh, gas, term.body})
+    call:
+      use bond = Kindelia.get_bond(world, term.bond) abort state
+      let {table, fresh, inam} = Kindelia.rename.many({}, fresh, bond.inam)
+      let {fresh, main} = Kindelia.sanitize(world, table, fresh, bond.main)
+      let subst = Kindelia.extend!(subst, inam, term.args)
+      //log("calling " | bond.name | ": " | Kindelia.show.term(world,main) | " ... " | String.join(",",bond.inam) | " ... " | String.join(",",inam))
+      Kindelia.reduce({world, subst, fresh, gas, main})
+    match:
+      let {world, subst, fresh, gas, expr} = Kindelia.reduce({world, subst, fresh, gas, subst{term.name}<>Kindelia.Term.word(0)})
+      case expr {
+        create:
+          use data = Kindelia.get_data(world,term.data) abort state
+          use ctor = Kindelia.get_constructor_value(data,expr.ctor) abort state
+          let indx = Kindelia.get_constructor_index(data,expr.ctor) abort state
+          let body = term.cses[indx] abort state
+          let nams = List.map!!(String.concat(term.name|"."), ctor@fnam)
+          let subst = Kindelia.extend!(subst, nams, expr.vals)
+          Kindelia.reduce({world, subst, fresh, gas, body})
+      } default state
+    compare:
+      let {world, subst, fresh, gas, val0} = Kindelia.reduce({world, subst, fresh, gas, term.val0})
+      let {world, subst, fresh, gas, val1} = Kindelia.reduce({world, subst, fresh, gas, term.val1})
+      case val0 val1 {
+        word word: case U64.cmp(val0.numb, val1.numb) {
+          ltn: Kindelia.reduce({world, subst, fresh, gas, term.iflt})
+          eql: Kindelia.reduce({world, subst, fresh, gas, term.ifeq})
+          gtn: Kindelia.reduce({world, subst, fresh, gas, term.ifgt})
+        }
+      } default state
+    operate:
+      let {world, subst, fresh, gas, val0} = Kindelia.reduce({world, subst, fresh, gas, term.val0})
+      let {world, subst, fresh, gas, val1} = Kindelia.reduce({world, subst, fresh, gas, term.val1})
+      case val0 val1 {
+        word word: case term.oper {
+          add: {world, subst, fresh, gas, Kindelia.Term.word(U64.add(val0.numb,val1.numb))}
+          sub: {world, subst, fresh, gas, Kindelia.Term.word(U64.sub(val0.numb,val1.numb))}
+          mul: {world, subst, fresh, gas, Kindelia.Term.word(U64.mul(val0.numb,val1.numb))}
+          div: {world, subst, fresh, gas, Kindelia.Term.word(U64.div(val0.numb,val1.numb))}
+          mod: {world, subst, fresh, gas, Kindelia.Term.word(U64.mod(val0.numb,val1.numb))}
+          or:  {world, subst, fresh, gas, Kindelia.Term.word(U64.or( val0.numb,val1.numb))}
+          and: {world, subst, fresh, gas, Kindelia.Term.word(U64.and(val0.numb,val1.numb))}
+          xor: {world, subst, fresh, gas, Kindelia.Term.word(U64.xor(val0.numb,val1.numb))}
+        }
+      } default state
+  } default state

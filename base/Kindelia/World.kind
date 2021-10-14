@@ -1,0 +1,5 @@
+type Kindelia.World {
+  new(
+    entry: Map<Kindelia.Entry>
+  )
+}

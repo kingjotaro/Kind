@@ -1,0 +1,96 @@
+// Renames variables to unique names
+Kindelia.sanitize(
+  world: Kindelia.World
+  table: Map<String>
+  fresh: Nat
+  term: Kindelia.Term
+): Pair<Nat, Kindelia.Term>
+  case term {
+    var:
+      let term = Kindelia.Term.var(table{term.name} <> term.name)
+      //log("rename " | term.name | " to " | (table{term.name} <> term.name))
+      {fresh, term}
+    call:
+      let {fresh, args} = Kindelia.sanitize.many(world, table, fresh, term.args)
+      {fresh, Kindelia.Term.call(term.bond, args)}
+    let:
+      let {fresh, expr} = Kindelia.sanitize(world, table, fresh, term.expr)
+      let {table, fresh, name} = Kindelia.rename(table, fresh, term.name)
+      let {fresh, body} = Kindelia.sanitize(world, table, fresh, term.body)
+      {fresh, Kindelia.Term.let(name, term.type, expr, body)}
+    create:
+      let {fresh, vals} = Kindelia.sanitize.many(world, table, fresh, term.vals)
+      {fresh, Kindelia.Term.create(term.ctor, vals)}
+    match:
+      let ctrs = Kindelia.get_constructors(world, term.data) <> []
+      let old_name = term.name
+      let new_name = table{term.name} <> term.name
+      let {fresh, cses} = Kindelia.sanitize.cases(world, table, fresh, old_name, new_name, ctrs, term.cses)
+      {fresh, Kindelia.Term.match(new_name, term.data, cses)}
+    word:
+      {fresh, Kindelia.Term.word(term.numb)}
+    compare:
+      let {fresh, val0} = Kindelia.sanitize(world, table, fresh, term.val0)
+      let {fresh, val1} = Kindelia.sanitize(world, table, fresh, term.val1)
+      let {fresh, iflt} = Kindelia.sanitize(world, table, fresh, term.iflt)
+      let {fresh, ifeq} = Kindelia.sanitize(world, table, fresh, term.ifeq)
+      let {fresh, ifgt} = Kindelia.sanitize(world, table, fresh, term.ifgt)
+      {fresh, Kindelia.Term.compare(val0, val1, iflt, ifeq, ifgt)}
+    operate:
+      let {fresh, val0} = Kindelia.sanitize(world, table, fresh, term.val0)
+      let {fresh, val1} = Kindelia.sanitize(world, table, fresh, term.val1)
+      {fresh, Kindelia.Term.operate(term.oper, val0, val1)}
+    set:
+      use file = Kindelia.get_file(world, term.file) abort {fresh, term}
+      let {fresh, expr} = Kindelia.sanitize(world, table, fresh, term.expr)
+      let {fresh, body} = Kindelia.sanitize(world, table, fresh, term.body)
+      {fresh, Kindelia.Term.set(term.file, expr, body)}
+    get:
+      use file = Kindelia.get_file(world, term.file) abort {fresh, term}
+      let {table, fresh, name} = Kindelia.rename(table, fresh, term.name)
+      let {fresh, body} = Kindelia.sanitize(world, table, fresh, term.body)
+      {fresh, Kindelia.Term.get(name, term.file, body)}
+    bind:
+      let {fresh, expr} = Kindelia.sanitize(world, table, fresh, term.expr)
+      let {table, fresh, name} = Kindelia.rename(table, fresh, term.name)
+      let {fresh, body} = Kindelia.sanitize(world, table, fresh, term.body)
+      {fresh, Kindelia.Term.bind(name, term.type, expr, body)}
+    return:
+      let {fresh, expr} = Kindelia.sanitize(world, table, fresh, term.expr)
+      {fresh, Kindelia.Term.return(expr)}
+  }
+
+Kindelia.sanitize.cases(
+  world: Kindelia.World
+  table: Map<String>
+  fresh: Nat
+  old_name: String
+  new_name: String
+  ctrs: List<Kindelia.Constructor>
+  cses: List<Kindelia.Term>
+): Pair<Nat, List<Kindelia.Term>>
+  case ctrs cses {
+    nil nil:
+      {fresh, []}
+    cons cons:
+      let new_table = table
+      let new_table = for field in ctrs.head@fnam: new_table{old_name | "." | field} <- new_name | "." | field
+      let {fresh, head} = Kindelia.sanitize(world, new_table, fresh, cses.head)
+      let {fresh, tail} = Kindelia.sanitize.cases(world, table, fresh, old_name, new_name, ctrs.tail, cses.tail)
+      {fresh, head & tail}
+  } default {fresh, []}
+
+Kindelia.sanitize.many(
+  world: Kindelia.World
+  table: Map<String>
+  fresh: Nat
+  terms: List<Kindelia.Term>
+): Pair<Nat, List<Kindelia.Term>>
+  case terms {
+    nil:
+      {fresh, []}
+    cons:
+      let {fresh, head} = Kindelia.sanitize(world, table, fresh, terms.head)
+      let {fresh, tail} = Kindelia.sanitize.many(world, table, fresh, terms.tail)
+      {fresh, head & tail}
+  }

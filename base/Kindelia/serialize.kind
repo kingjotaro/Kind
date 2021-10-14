@@ -1,0 +1,198 @@
+Kindelia.serialize.varlen(value: Nat): Bits
+  Kindelia.serialize.varlen.go(Nat.add(value,1))
+
+Kindelia.serialize.varlen.go(value: Nat): Bits
+  case value {
+    zero: Bits.e
+    succ:
+      if Nat.eql(value,1) then
+        Bits.o(Bits.e)
+      else if Nat.eql(Nat.mod(value,2),0)
+        then Bits.i(Bits.o(Kindelia.serialize.varlen.go(Nat.div(value,2))))
+        else Bits.i(Bits.i(Kindelia.serialize.varlen.go(Nat.div(value,2))))
+  }
+
+Kindelia.serialize.fixlen(size: Nat, value: Nat): Bits
+  case size {
+    zero: Bits.e
+    succ: if Nat.eql(Nat.mod(value,2),0)
+      then Bits.o(Kindelia.serialize.fixlen(size.pred, Nat.div(value,2)))
+      else Bits.i(Kindelia.serialize.fixlen(size.pred, Nat.div(value,2)))
+  }
+
+Kindelia.serialize.list<A: Type>(item: A -> Bits, list: List<A>): Bits
+  case list {
+    nil: Bits.o(Bits.e)
+    cons: Bits.i(Bits.concat(item(list.head), Kindelia.serialize.list<A>(item, list.tail)))
+  }
+
+Kindelia.serialize.name(name: String): Bits
+  case name {
+    nil:
+      Bits.o(Bits.e)
+    cons:
+      let numb =
+        if U16.btw('0', name.head, '9') then
+          U16.sub(name.head, '0')
+        else if U16.btw('A', name.head, 'Z') then
+          U16.add(U16.sub(name.head, 'A'), 10#16)
+        else if U16.btw('a', name.head, 'z') then
+          U16.add(U16.sub(name.head, 'a'), 36#16)
+        else if U16.btw('_', name.head, '_') then
+          62#16
+        else
+          63#16
+      let head = Kindelia.serialize.fixlen(6, U16.to_nat(numb))
+      let tail = Kindelia.serialize.name(name.tail)
+      Bits.i(Bits.concat(head, tail))
+  }
+
+Kindelia.serialize.term(world: Kindelia.World, vars: List<String>, term: Kindelia.Term): Bits
+  case term {
+    var:
+      Bits.o(Kindelia.serialize.name.local(world, vars, term.name))
+    let:
+      let name = Kindelia.serialize.name(term.name)
+      let type = Kindelia.serialize.type(world,term.type) // TODO
+      let expr = Kindelia.serialize.term(world,vars,term.expr)
+      let body = Kindelia.serialize.term(world,term.name&vars,term.body)
+      Bits.i(Bits.o(Bits.o(Bits.o(Bits.concat(name, Bits.concat(type, Bits.concat(expr, body)))))))
+    call:
+      let bond = Kindelia.serialize.name(term.bond)
+      let args = Kindelia.serialize.list!(Kindelia.serialize.term(world,vars), term.args)
+      Bits.i(Bits.i(Bits.o(Bits.o(Bits.concat(bond, args)))))
+    create:
+      let ctor = Kindelia.serialize.name(term.ctor)
+      let vals = Kindelia.serialize.list!(Kindelia.serialize.term(world,vars), term.vals)
+      Bits.i(Bits.o(Bits.i(Bits.o(Bits.concat(ctor, vals)))))
+    match:
+      let name = Kindelia.serialize.name.local(world,vars,term.name)
+      let data = Kindelia.serialize.name(term.data)
+      let cses = Kindelia.serialize.cases(world,vars,term.name,Kindelia.get_constructors(world,term.data)<>[],term.cses)
+      Bits.i(Bits.i(Bits.i(Bits.o(Bits.concat(name, Bits.concat(data, cses))))))
+    word:
+      let numb = Kindelia.serialize.fixlen(64, U64.to_nat(term.numb))
+      Bits.i(Bits.o(Bits.o(Bits.i(numb))))
+    compare:
+      let val0 = Kindelia.serialize.term(world,vars,term.val0)
+      let val1 = Kindelia.serialize.term(world,vars,term.val1)
+      let iflt = Kindelia.serialize.term(world,vars,term.iflt)
+      let ifeq = Kindelia.serialize.term(world,vars,term.ifeq)
+      let ifgt = Kindelia.serialize.term(world,vars,term.ifgt)
+      Bits.i(Bits.i(Bits.o(Bits.i(Bits.concat(val0, Bits.concat(val1, Bits.concat(iflt, Bits.concat(ifeq, ifgt))))))))
+    operate:
+      let oper = Kindelia.serialize.fixlen(3, case term.oper { add:0, sub:1, mul:2, div:3, mod:4, or:5, and:6, xor:7 })
+      let val0 = Kindelia.serialize.term(world,vars,term.val0)
+      let val1 = Kindelia.serialize.term(world,vars,term.val1)
+      Bits.i(Bits.o(Bits.i(Bits.i(Bits.concat(oper, Bits.concat(val0, val1))))))
+    set:
+      let slit = Kindelia.serialize.name(term.file)
+      let expr = Kindelia.serialize.term(world,vars,term.expr)
+      let body = Kindelia.serialize.term(world,vars,term.body)
+      Bits.i(Bits.i(Bits.i(Bits.i(Bits.o(Bits.o(Bits.concat(slit, Bits.concat(expr, body))))))))
+    get:
+      let slit = Kindelia.serialize.name(term.file)
+      let name = Kindelia.serialize.name(term.name)
+      let body = Kindelia.serialize.term(world,term.name&vars,term.body)
+      Bits.i(Bits.i(Bits.i(Bits.i(Bits.i(Bits.o(Bits.concat(slit, Bits.concat(name, body))))))))
+    bind:
+      let name = Kindelia.serialize.name(term.name)
+      let type = Kindelia.serialize.type(world,term.type) // TODO
+      let expr = Kindelia.serialize.term(world,vars,term.expr)
+      let body = Kindelia.serialize.term(world,term.name&vars,term.body)
+      Bits.i(Bits.i(Bits.i(Bits.i(Bits.o(Bits.i(Bits.concat(name, Bits.concat(type, Bits.concat(expr, body)))))))))
+    return:
+      let expr = Kindelia.serialize.term(world,vars,term.expr)
+      Bits.i(Bits.i(Bits.i(Bits.i(Bits.i(Bits.i(expr))))))
+  } default _
+Kindelia.serialize.name.local(world: Kindelia.World, vars: List<String>, name: String): Bits
+  case List.find_index!(vars, String.eql(name)) as got {
+    none: Bits.e
+    some: Kindelia.serialize.varlen(got.value)
+  }
+
+Kindelia.serialize.cases(
+  world: Kindelia.World
+  vars: List<String>
+  name: String
+  ctors: List<Kindelia.Constructor>
+  cases: List<Kindelia.Term>
+): Bits
+  case ctors cases {
+    nil nil:
+      Bits.e
+    cons cons:
+      let flds = List.map!!(String.concat(name|"."), ctors.head@fnam)
+      let head = Kindelia.serialize.term(world, List.reverse!(flds) ++ vars, cases.head)
+      let tail = Kindelia.serialize.cases(world, vars, name, ctors.tail, cases.tail)
+      Bits.concat(head, tail)
+  } default Bits.e
+
+Kindelia.serialize.type(world: Kindelia.World, typ: Kindelia.Type): Bits
+  case typ {
+    word: Bits.o(Bits.o(Bits.e))
+    data: Bits.i(Bits.o(Kindelia.serialize.name(typ.name)))
+    effe: Bits.o(Bits.i(Kindelia.serialize.type(world,typ.rety)))
+  }
+
+Kindelia.serialize.data(world: Kindelia.World, data: Kindelia.Data): Bits
+  open data
+  let name = Kindelia.serialize.name(data.name)
+  let ctrs = Kindelia.serialize.list!(Kindelia.serialize.constructor(world), data.constructors)
+  Bits.concat(name, ctrs)
+
+Kindelia.serialize.constructor(world: Kindelia.World, ctor: Kindelia.Constructor): Bits
+  open ctor
+  let name = Kindelia.serialize.name(ctor.name)
+
+Kindelia.serialize.bond(world: Kindelia.World, bond: Kindelia.Bond): Bits
+  open bond
+  let name = Kindelia.serialize.name(bond.name)
+  let inam = Kindelia.serialize.list!(Kindelia.serialize.name, bond.inam)
+  let ityp = Kindelia.serialize.list!(Kindelia.serialize.type(world), bond.ityp)
+  let otyp = Kindelia.serialize.type(world, bond.otyp)
+  let main = Kindelia.serialize.term(world, List.reverse!(bond.inam), bond.main)
+  Bits.concat(name, Bits.concat(inam, Bits.concat(ityp, Bits.concat(otyp, main))))
+  let nams = Kindelia.serialize.list!(Kindelia.serialize.name, ctor.fnam)
+  let typs = Kindelia.serialize.list!(Kindelia.serialize.type(world), ctor.ftyp)
+  Bits.concat(name, Bits.concat(nams, typs))
+
+Kindelia.serialize.file(world: Kindelia.World, file: Kindelia.File): Bits
+  open file
+  let name = Kindelia.serialize.name(file.name)
+  let ownr = Kindelia.serialize.list!(Kindelia.serialize.name, file.ownr)
+  let type = Kindelia.serialize.type(world, file.type)
+  let expr = Kindelia.serialize.term(world, [], file.expr)
+  Bits.concat(name, Bits.concat(ownr, Bits.concat(type, expr)))
+
+Kindelia.serialize.transaction(world: Kindelia.World, transaction: Kindelia.Transaction): Bits
+  case transaction {
+    new_data:
+      let data = Kindelia.serialize.data(world, transaction.data)
+      Bits.o(Bits.o(data))
+    new_bond:
+      let bond = Kindelia.serialize.bond(world, transaction.bond)
+      Bits.i(Bits.o(bond))
+    new_file:
+      let file = Kindelia.serialize.file(world, transaction.file)
+      Bits.o(Bits.i(file))
+    new_eval:
+      let term = Kindelia.serialize.eval(world, transaction.eval)
+      Bits.i(Bits.i(term))
+  }
+
+Kindelia.serialize.eval(world: Kindelia.World, eval: Kindelia.Eval): Bits
+  open eval
+  let term = Kindelia.serialize.term(world, [], eval.term)
+  let type = Kindelia.serialize.type(world, eval.type)
+  Bits.concat(term, type)
+
+Kindelia.serialize.block(world: Kindelia.World, block: List<Kindelia.Transaction>): Bits
+  case block {
+    nil:
+      Bits.e
+    cons:
+      let head = Kindelia.serialize.transaction(world, block.head)
+      let tail = Kindelia.serialize.block(world, block.tail)
+      Bits.concat(head, tail)
+  }

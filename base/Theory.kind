@@ -1,0 +1,80 @@
+// TODO
+String.eql.equal(
+  r: String
+  s: String
+  Hyp: Equal<Bool>(String.eql(r, s), true)
+): Equal<String>(r, s)
+  ?string.eql.equal
+
+Theory.Type.equal(
+  a: Kindelia.Type
+  b: Kindelia.Type
+  Hyp: Equal<Bool>(Kindelia.equal(a, b), true)
+): Equal<Kindelia.Type>(a, b)
+  case a b with Hyp {
+    word word:
+      refl
+    data data:
+      let lemma = String.eql.equal!!(Hyp)
+      let qed = apply(Kindelia.Type.data, lemma)
+      qed
+    effe effe:
+      let ind = Theory.Type.equal!!(Hyp)
+      let qed = apply(Kindelia.Type.effe, ind)
+      qed
+  }! default
+    let contra = Bool.false_neq_true(Hyp)
+    Empty.absurd!(contra)
+
+type KeyValue <K: Type, V: Type, M: Type> {
+  new(
+    empty: M
+    get: K -> M -> Maybe(V)
+    set: K -> V -> M -> M
+    del: K -> M -> M
+    set_value: (k: K, v: V, m: M) -> Equal<Maybe<V>>(get(k, set(k, v, m)), Maybe.some<V>(v))
+    set_preserve: (k0: K, k1: K, v: V, m: M, Hyp: Not(Equal<K>(k0, k1))) -> Equal<Maybe(V)>(get(k0, set(k1, v, m)), get(k0, m))
+    del_value: (k: K, m: M) -> Equal<Maybe<V>>(get(k, del(k, m)), Maybe.none<V>)
+    get_empty: (k: K) -> Equal<Maybe(V)>(get(k, empty), Maybe.none<V>)
+  )
+}
+
+KeyValue.in<K: Type, V: Type, M: Type>(Ax: KeyValue<K, V, M>, k: K, m: M): Type
+  open Ax
+  case Ax.get(k, m) {
+    some:
+      Unit
+    none:
+      Empty
+  }
+
+// TODO
+TypeContext.Axioms: KeyValue<String, Kindelia.Type, Map<Kindelia.Type>>
+  KeyValue.new<String, Kindelia.Type, Map<Kindelia.Type>>(
+    Map.new<Kindelia.Type>
+    Map.get<Kindelia.Type>
+    Map.set<Kindelia.Type>
+    Map.delete<Kindelia.Type>
+    ?map.set_value
+    ?map.set_preserve
+    ?map.del_value
+    ?map.get_empty
+  )
+
+TypeContext.in: String -> Map<Kindelia.Type> -> Type
+  KeyValue.in<String, Kindelia.Type, Map<Kindelia.Type>>(TypeContext.Axioms)
+
+Theory.WellTyped(context: Map<Kindelia.Type>, term: Kindelia.Term, type: Kindelia.Type): Type
+  open TypeContext.Axioms
+  case term {
+    var:
+      Equal<Maybe<Kindelia.Type>>(TypeContext.Axioms.get(term.name, context), Maybe.some<Kindelia.Type>(type))
+    word:
+      Equal<Kindelia.Type>(type, Kindelia.Type.word)
+    operate:
+      Triple<
+        Equal<Kindelia.Type>(type, Kindelia.Type.word)
+        Theory.WellTyped(context, term.val0, Kindelia.Type.word)
+        Theory.WellTyped(context, term.val1, Kindelia.Type.word)
+      >
+  } default Empty

@@ -1,0 +1,229 @@
+Kindelia.deserialize.varlen.go(bits: Bits): Pair<Bits,Nat>
+  case bits {
+    e: {Bits.e, 0}
+    o: {bits.pred, 1}
+    i: case bits.pred {
+      e: {bits.pred, 0}
+      o:
+        let {bits,x} = Kindelia.deserialize.varlen.go(bits.pred.pred)
+        {bits, Nat.mul(x,2)}
+      i:
+        let {bits,x} = Kindelia.deserialize.varlen.go(bits.pred.pred)
+        {bits, Nat.add(Nat.mul(x,2),1)}
+    }
+  }
+
+Kindelia.deserialize.list<A: Type>(item: Bits -> Pair<Bits,A>, bits: Bits): Pair<Bits,List<A>>
+  case bits {
+    e: {Bits.e, []}
+    o: {bits.pred, []}
+    i:
+      let {bits, head} = item(bits.pred)
+      let {bits, tail} = Kindelia.deserialize.list<A>(item, bits)
+      {bits, head & tail}
+  }
+Kindelia.deserialize.fixlen(size: Nat, bits: Bits): Pair<Bits,Nat>
+  case size {
+    zero: {bits, 0}
+    succ: case bits {
+      e: {Bits.e, 0}
+      o:
+        let {bits,x} = Kindelia.deserialize.fixlen(size.pred, bits.pred)
+        {bits, Nat.mul(x,2)}
+      i:
+        let {bits,x} = Kindelia.deserialize.fixlen(size.pred, bits.pred)
+        {bits, Nat.add(Nat.mul(x,2),1)}
+    }
+  }
+
+Kindelia.deserialize.name(bits: Bits): Pair<Bits,String>
+  case bits {
+    e: {Bits.e, ""}
+    o: {bits.pred, ""}
+    i:
+      let {bits, numb} = Kindelia.deserialize.fixlen(6, bits.pred)
+      let {bits, tail} = Kindelia.deserialize.name(bits)
+      let numb = Nat.to_u16(numb)
+      let head =
+        if U16.btw( 0, numb,  9) then
+          U16.add(numb, '0')
+        else if U16.btw(10, numb, 35) then
+          U16.add(U16.sub(numb,10#16), 'A')
+        else if U16.btw(36, numb, 61) then
+          U16.add(U16.sub(numb,36#16), 'a')
+        else if U16.btw(62, numb, 62) then
+          '_'
+        else
+          '.'
+      {bits, String.cons(head,tail)}
+  }
+
+Kindelia.deserialize.term(world: Kindelia.World, vars: List<String>, bits: Bits): Pair<Bits,Kindelia.Term>
+  case bits {
+    o:
+      let {bits,name} = Kindelia.deserialize.name.local(world, vars, bits.pred)
+      {bits, Kindelia.Term.var(name)}
+    i:
+      let {bits,ctor} = Kindelia.deserialize.fixlen(3, bits.pred)
+      switch Nat.eql(ctor) {
+        0:
+          let {bits,name} = Kindelia.deserialize.name(bits)
+          let {bits,type} = Kindelia.deserialize.type(world,bits)
+          let {bits,expr} = Kindelia.deserialize.term(world,vars,bits)
+          let {bits,body} = Kindelia.deserialize.term(world,name&vars,bits)
+          {bits, Kindelia.Term.let(name,type,expr,body)}
+        1:
+          let {bits,bond} = Kindelia.deserialize.name(bits)
+          let {bits,args} = Kindelia.deserialize.list!(Kindelia.deserialize.term(world,vars), bits)
+          {bits, Kindelia.Term.call(bond,args)}
+        2:
+          let {bits,ctor} = Kindelia.deserialize.name(bits)
+          let {bits,vals} = Kindelia.deserialize.list!(Kindelia.deserialize.term(world,vars), bits)
+          {bits, Kindelia.Term.create(ctor, vals)}
+        3:
+          let {bits,name} = Kindelia.deserialize.name.local(world,vars,bits)
+          let {bits,data} = Kindelia.deserialize.name(bits)
+          let {bits,cses} = Kindelia.deserialize.cases(world,vars,name,Kindelia.get_constructors(world,data)<>[],bits)
+          {bits, Kindelia.Term.match(name,data,cses)}
+        4:
+          let {bits,numb} = Kindelia.deserialize.fixlen(64,bits)
+          {bits, Kindelia.Term.word(Nat.to_u64(numb))}
+        5:
+          let {bits,val0} = Kindelia.deserialize.term(world,vars,bits)
+          let {bits,val1} = Kindelia.deserialize.term(world,vars,bits)
+          let {bits,iflt} = Kindelia.deserialize.term(world,vars,bits)
+          let {bits,ifeq} = Kindelia.deserialize.term(world,vars,bits)
+          let {bits,ifgt} = Kindelia.deserialize.term(world,vars,bits)
+          {bits, Kindelia.Term.compare(val0,val1,iflt,ifeq,ifgt)}
+        6:
+          let {bits,oper} = Kindelia.deserialize.fixlen(3, bits)
+          let {bits,val0} = Kindelia.deserialize.term(world,vars,bits)
+          let {bits,val1} = Kindelia.deserialize.term(world,vars,bits)
+          let oper = switch Nat.eql(oper) {
+            0: Kindelia.Operation.add
+            1: Kindelia.Operation.sub
+            2: Kindelia.Operation.mul
+            3: Kindelia.Operation.div
+            4: Kindelia.Operation.mod
+            5: Kindelia.Operation.or
+            6: Kindelia.Operation.and
+            7: Kindelia.Operation.xor
+          } default Kindelia.Operation.add
+          {bits, Kindelia.Term.operate(oper, val0, val1)}
+        7:
+          let {bits,ctor} = Kindelia.deserialize.fixlen(2, bits)
+          switch Nat.eql(ctor) {
+            0:
+              let {bits,file} = Kindelia.deserialize.name(bits)
+              let {bits,expr} = Kindelia.deserialize.term(world,vars,bits)
+              let {bits,body} = Kindelia.deserialize.term(world,vars,bits)
+              {bits, Kindelia.Term.set(file,expr,body)}
+            1:
+              let {bits,file} = Kindelia.deserialize.name(bits)
+              let {bits,name} = Kindelia.deserialize.name(bits)
+              let {bits,body} = Kindelia.deserialize.term(world,name&vars,bits)
+              {bits, Kindelia.Term.get(name,file,body)}
+            2:
+              let {bits,name} = Kindelia.deserialize.name(bits)
+              let {bits,type} = Kindelia.deserialize.type(world,bits)
+              let {bits,expr} = Kindelia.deserialize.term(world,vars,bits)
+              let {bits,body} = Kindelia.deserialize.term(world,name&vars,bits)
+              {bits, Kindelia.Term.bind(name,type,expr,body)}
+            3:
+              let {bits,expr} = Kindelia.deserialize.term(world,vars,bits)
+              {bits, Kindelia.Term.return(expr)}
+          } default {bits, Kindelia.Term.word(0)}
+      } default {bits, Kindelia.Term.word(0)}
+  } default {bits, Kindelia.Term.word(0)}
+Kindelia.deserialize.name.local(world: Kindelia.World, vars: List<String>, bits: Bits): Pair<Bits,String>
+  let {bits,numb} = Kindelia.deserialize.varlen(bits)
+  {bits, vars[numb] <> ""}
+
+Kindelia.deserialize.cases(
+  world: Kindelia.World
+  vars: List<String>
+  name: String
+  ctors: List<Kindelia.Constructor>
+  bits: Bits
+): Pair<Bits, List<Kindelia.Term>>
+  case ctors {
+    nil:
+      {bits, []}
+    cons:
+      let flds = List.map!!(String.concat(name|"."), ctors.head@fnam)
+      let {bits,head} = Kindelia.deserialize.term(world, List.reverse!(flds) ++ vars, bits)
+      let {bits,tail} = Kindelia.deserialize.cases(world, vars, name, ctors.tail, bits)
+      {bits, head & tail}
+  }
+
+Kindelia.deserialize.type(world: Kindelia.World, bits: Bits): Pair<Bits,Kindelia.Type>
+  let {bits,ctor} = Kindelia.deserialize.fixlen(2, bits)
+  switch Nat.eql(ctor) {
+    0:
+      {bits, Kindelia.Type.word}
+    1:
+      let {bits,name} = Kindelia.deserialize.name(bits)
+      {bits, Kindelia.Type.data(name)}
+    2:
+      let {bits,rety} = Kindelia.deserialize.type(world, bits)
+      {bits, Kindelia.Type.effe(rety)}
+  } default {bits, Kindelia.Type.word}
+
+Kindelia.deserialize.varlen(bits: Bits): Pair<Bits,Nat>
+  let {bits,value} = Kindelia.deserialize.varlen.go(bits)
+  {bits, Nat.sub(value,1)}
+
+Kindelia.deserialize.constructor(world: Kindelia.World, bits: Bits): Pair<Bits,Kindelia.Constructor>
+  let {bits,name} = Kindelia.deserialize.name(bits)
+  let {bits,nams} = Kindelia.deserialize.list!(Kindelia.deserialize.name, bits)
+  let {bits,typs} = Kindelia.deserialize.list!(Kindelia.deserialize.type(world), bits)
+  {bits, Kindelia.Constructor.new(name, nams, typs)}
+Kindelia.deserialize.data(world: Kindelia.World, bits: Bits): Pair<Bits, Kindelia.Data>
+  let {bits,name} = Kindelia.deserialize.name(bits)
+  let {bits,ctrs} = Kindelia.deserialize.list!(Kindelia.deserialize.constructor(world), bits)
+  {bits, Kindelia.Data.new(name,ctrs)}
+
+Kindelia.deserialize.bond(world: Kindelia.World, bits: Bits): Pair<Bits,Kindelia.Bond>
+  let {bits,name} = Kindelia.deserialize.name(bits)
+  let {bits,inam} = Kindelia.deserialize.list!(Kindelia.deserialize.name, bits)
+  let {bits,ityp} = Kindelia.deserialize.list!(Kindelia.deserialize.type(world), bits)
+  let {bits,otyp} = Kindelia.deserialize.type(world, bits)
+  let {bits,main} = Kindelia.deserialize.term(world,List.reverse!(inam),bits)
+  {bits, Kindelia.Bond.new(name, inam, ityp, otyp, main)}
+
+Kindelia.deserialize.file(world: Kindelia.World, bits: Bits): Pair<Bits,Kindelia.File>
+  let {bits,name} = Kindelia.deserialize.name(bits)
+  let {bits,ownr} = Kindelia.deserialize.list!(Kindelia.deserialize.name, bits)
+  let {bits,type} = Kindelia.deserialize.type(world, bits)
+  let {bits,expr} = Kindelia.deserialize.term(world, [], bits)
+  {bits, Kindelia.File.new(name, ownr, type, expr)}
+
+Kindelia.deserialize.transaction(world: Kindelia.World, bits: Bits): Pair<Bits,Kindelia.Transaction>
+  let {bits,ctor} = Kindelia.deserialize.fixlen(2, bits)
+  switch Nat.eql(ctor) {
+    0:
+      let {bits,data} = Kindelia.deserialize.data(world, bits)
+      {bits, Kindelia.Transaction.new_data(data)}
+    1:
+      let {bits,bond} = Kindelia.deserialize.bond(world, bits)
+      {bits, Kindelia.Transaction.new_bond(bond)}
+    2:
+      let {bits,file} = Kindelia.deserialize.file(world, bits)
+      {bits, Kindelia.Transaction.new_file(file)}
+    3:
+      let {bits,eval} = Kindelia.deserialize.eval(world, bits)
+      {bits, Kindelia.Transaction.new_eval(eval)}
+  } default {bits, Kindelia.Transaction.new_data(Kindelia.Data.new("",[]))}
+
+Kindelia.deserialize.eval(world: Kindelia.World, bits: Bits): Pair<Bits,Kindelia.Eval>
+  let {bits,term} = Kindelia.deserialize.term(world, [], bits)
+  let {bits,type} = Kindelia.deserialize.type(world, bits)
+  {bits, Kindelia.Eval.new(term,type)}
+
+Kindelia.deserialize.block(world: Kindelia.World, bits: Bits): Pair<Bits, List<Kindelia.Transaction>>
+  if Bits.is_empty(bits) then
+    {Bits.e, []}
+  else
+    let {bits,head} = Kindelia.deserialize.transaction(world, bits)
+    let {bits,tail} = Kindelia.deserialize.block(world, bits)
+    {bits, head & tail}

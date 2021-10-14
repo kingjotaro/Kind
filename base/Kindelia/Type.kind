@@ -1,0 +1,6 @@
+// A type reference
+type Kindelia.Type {
+  word
+  data(name: String)
+  effe(rety: Kindelia.Type)
+}

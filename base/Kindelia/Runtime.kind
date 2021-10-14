@@ -1,0 +1,15 @@
+type Kindelia.Runtime <A: Type> {
+  new(
+    world: Kindelia.World
+    subst: Map<Kindelia.Term>
+    fresh: Nat
+    gas: Nat
+    term: A
+  )
+}
+
+Kindelia.Runtime.Term: Type
+  Kindelia.Runtime<Kindelia.Term>
+
+Kindelia.Runtime.Terms: Type
+  Kindelia.Runtime<List<Kindelia.Term>>

@@ -1,0 +1,7 @@
+// An evaluation
+type Kindelia.Eval {
+  new(
+    term: Kindelia.Term
+    type: Kindelia.Type
+  )
+}
