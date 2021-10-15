@@ -1,5 +1,2 @@
-type Kindelia.World {
-  new(
-    entry: Map<Kindelia.Entry>
-  )
-}
+Kindelia.World: Type
+  Map<Kindelia.Entry>

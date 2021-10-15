@@ -2,8 +2,7 @@
 type Kindelia.Bond {
   new(
     name: String
-    inam: List<String>
-    ityp: List<Kindelia.Type>
+    iprm: List<Pair<String, Kindelia.Type>>
     otyp: Kindelia.Type
     main: Kindelia.Term
   )

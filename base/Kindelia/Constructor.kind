@@ -2,7 +2,6 @@
 type Kindelia.Constructor {
   new(
     name: String
-    fnam: List<String>
-    ftyp: List<Kindelia.Type>
+    bind: List<Pair<String, Kindelia.Type>>
   )
 }
