@@ -1,3 +1,3 @@
 type Shape.Circle {
-  new(cen: V2, rad: F64)
+  new(center: V2, radius: F64)
 }

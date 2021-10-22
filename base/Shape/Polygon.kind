@@ -1,3 +1,3 @@
 type Shape.Polygon {
-  new(vs: List<V2>)
+  new(vertexes: List<V2>)
 }

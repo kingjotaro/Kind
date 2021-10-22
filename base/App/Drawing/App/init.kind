@@ -7,10 +7,13 @@ App.Drawing.App.init(img: VoxBox): App.Init<App.Drawing.State>
 
   let input       = ""
   user        = ""
+  
   let env_info    = App.EnvInfo.new({256, 256}, {0, 0})
   let tool        = App.Drawing.Tool.pencil
   let size        = 3 :: U32
   let color       = Col32.new(255#32,0#32,0#32,125#32)
+  let img         = Shape.Circle.draw(Shape.Circle.new(V2.new(125.0, 62.0), 100.0), +100#32, color, img)
+  let img         = Shape.Line.draw(Shape.Line.new(V2.new(114.0, 32.0), V2.new(114.0, 138.0)), +100#32, color, img)
   let whiteboard  = App.Drawing.Whiteboard.new([img], img, [])
   let style       = App.Drawing.Style.new(tool, size, color)
   

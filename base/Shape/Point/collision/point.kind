@@ -1,0 +1,4 @@
+Shape.Point.collision.point(point0: Shape.Point, point1: Shape.Point): Bool
+  let a = point0@p
+  let b = point1@p
+  V2.eql(a,b)

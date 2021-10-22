@@ -1,0 +1,2 @@
+Shape.Point.collision.TODO_polygon(point: Shape.Point, polygon: Shape.Polygon): Bool
+  true

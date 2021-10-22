@@ -1,0 +1,3 @@
+Shape.Point.draw(point: Shape.Point, z: I32, color: Col32,  img: VoxBox): VoxBox
+  let p = point@p
+  VoxBox.Draw.circle(F64.to_i32(p@x), F64.to_i32(p@y), 3, z, color, img)
