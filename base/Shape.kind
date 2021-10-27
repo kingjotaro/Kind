@@ -2,7 +2,6 @@ type Shape {
   point (val: Shape.Point)
   line (val: Shape.Line)
   circle (val: Shape.Circle)
-  triangle (val: Shape.Triangle)
   rectangle (val: Shape.Rectangle)
   polygon (val: Shape.Polygon)
 }

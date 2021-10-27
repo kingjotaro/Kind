@@ -7,4 +7,4 @@ Shape.Rectangle.to_polygon(rectangle: Shape.Rectangle): Shape.Polygon
   let b = V2.new(x0, y1)
   let c = V2.new(x1, y1)
   let d = V2.new(x1, y0)
-  Shape.Polygon.new([a,b,c,d])
+  [a,b,c,d]

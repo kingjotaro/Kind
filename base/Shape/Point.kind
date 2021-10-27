@@ -1,3 +1,2 @@
-type Shape.Point {
-  new(p: V2)
-}
+Shape.Point: Type
+  V2

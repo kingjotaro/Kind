@@ -1,0 +1,7 @@
+Shape.Rectangle.collision.rectangle(rectangle0: Shape.Rectangle, rectangle1: Shape.Rectangle): Bool
+  use rectA = Shape.Rectangle.to_points(rectangle0)
+  use rectB = Shape.Rectangle.to_points(rectangle1)
+  (rectA.x0 <? rectB.x1) &&
+  (rectA.x1 >? rectB.x0) &&
+  (rectA.y0 <? rectB.y1) &&
+  (rectA.y1 >? rectB.y0) 

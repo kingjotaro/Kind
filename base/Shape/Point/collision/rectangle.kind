@@ -1,7 +1,7 @@
 Shape.Point.collision.rectangle(point: Shape.Point, rectangle: Shape.Rectangle): Bool
   let ps = Shape.Rectangle.to_points(rectangle)
-  let x = point@p@x
-  let y = point@p@y
+  let x = point@x
+  let y = point@y
 
     (x >=? ps@x0) &&    // right of the left edge AND
     (x <=? ps@x1) &&    // left of the right edge AND
