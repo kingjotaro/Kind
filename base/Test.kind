@@ -1,6 +1,7 @@
 Test: _
-  let a = [1,2,3]
+  let a = [2,4,5]
   let b = 1
   let c = a ++ [b]
+  let d = List.map!!(Nat.to_bits, c)
 
-  List.show!(Nat.show, c)
+  Bits.to_nat(Bits.o(Bits.o(Bits.o(Bits.i(Bits.e)))))

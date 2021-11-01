@@ -1,8 +1,8 @@
 Shape.Rectangle.to_edges(rectangle: Shape.Rectangle): Shape.Rectangle.Edges
-  let x0 = rectangle@a@x
-  let x1 = rectangle@b@x
-  let y0 = rectangle@a@y
-  let y1 = rectangle@b@y
+  let x0 = rectangle@x0
+  let x1 = rectangle@x1
+  let y0 = rectangle@y0
+  let y1 = rectangle@y1
 
   let a = Shape.Line.new(V2.new(x0, y0), V2.new(x0, y1))
   let b = Shape.Line.new(V2.new(x1, y0), V2.new(x1, y1))

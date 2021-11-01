@@ -1,0 +1,95 @@
+// App states (local = clicks, global = visitors)
+App.Collision.State: App.State
+  App.State.new(App.Collision.State.Local, Nat)
+
+type App.Collision.State.Local {
+  new(
+    shapes: Map<Shape>
+    mouse: Pair<U32, U32>
+  )
+}
+
+// Initial state
+App.Collision.init: App.Init<App.Collision.State>
+  let shapes = 
+  {
+    "P.1": Shape.point(V2.new(240.0, 120.0)),
+    "P.2": Shape.point(V2.new(30.0, 240.0)),
+    "L.1": Shape.line(Shape.Line.new(V2.new(10.0, 10.0), V2.new(200.0, 10.0))),
+    "L.2": Shape.line(Shape.Line.new(V2.new(115.0, 40.0), V2.new(100.0, 45.0))),
+    "C.1": Shape.circle(Shape.Circle.new(V2.new(256.0, 200), 40.0)),
+    "C.2": Shape.circle(Shape.Circle.new(V2.new(240.0, 220), 10.0)),
+    "R.1": Shape.rectangle(Shape.Rectangle.new(0.0, 10.0, 120.0, 160.0))
+    "R.2": Shape.rectangle(Shape.Rectangle.new(80.0, 200.0, 200.0, 250.0))
+    "P.1": Shape.polygon(
+      [
+      V2.new(294.0, 75.0)
+      V2.new(217.0, 55.0)
+      V2.new(142.0, 104.0)
+      V2.new(250.0, 207.0)
+      V2.new(122.0, 80.0)
+      ])
+  }    
+
+  let mouse = {0,0}
+  let local = App.Collision.State.Local.new(shapes, mouse)
+  App.Store.new<App.Collision.State>(local, 0)
+
+// Render function
+App.Collision.draw(img: VoxBox): App.Draw<App.Collision.State>
+  (state)
+  let local = state@local
+  let vbox = 
+    for name:shape in local@shapes with img:
+      Shape.draw(shape, 10, Col32.new(255, 0, 0, 255), img)
+    img
+
+  <div style={"width": "vw", "height": "hw"}>
+    {
+      DOM.vbox(
+        {
+          "width": "512"
+          "height": "512"
+          "scale": "2"
+        },
+        {},
+        vbox)
+    }
+  </div>
+
+// Event handler
+App.Collision.when: App.When<App.Collision.State>
+  (event, state)
+  case event {
+    init: IO {
+      App.watch!(App.room_zero)
+      App.new_post!(App.room_zero, "")
+    }
+    mouse_move: 
+      let local = state@local
+      let local = local@mouse <- event.mouse_pos
+      App.set_local!(local)
+    mouse_down: IO {
+      App.set_local!(state@local)
+    }
+  } default App.pass!
+
+// Global ticker: not used
+App.Collision.tick: App.Tick<App.Collision.State>
+  App.no_tick<App.Collision.State>
+
+// Global visitor: counts posts to room_zero
+App.Collision.post: App.Post<App.Collision.State>
+  (time, room, addr, data, global_state)
+  global_state + 1
+
+// A "Collision, world!" + counter application
+App.Collision: App<App.Collision.State>
+  let img = VoxBox.alloc_capacity(U32.mul(65536#32, 8#32))
+  App.new<App.Collision.State>(
+    App.Collision.init
+    App.Collision.draw(img)
+    App.Collision.when
+    App.Collision.tick
+    App.Collision.post
+  )

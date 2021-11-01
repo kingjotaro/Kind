@@ -1,9 +1,0 @@
-Shape.Rectangle.to_points(rectangle: Shape.Rectangle): Shape.Rectangle.Points
-  let x0 = rectangle@a@x
-  let x1 = rectangle@b@x
-  let y0 = rectangle@a@y
-  let y1 = rectangle@b@y
-
-  let {x0, x1} = if x0 <? x1 then {x0, x1} else {x1, x0}
-  let {y0, y1} = if y0 <? y1 then {y0, y1} else {y1, y0}
-  Shape.Rectangle.Points.new(x0, x1, y0, x1)
