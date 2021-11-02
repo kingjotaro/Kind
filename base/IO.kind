@@ -2,3 +2,63 @@ type IO <A: Type> {
   end(value: A),
   ask(query: String, param: String, then: (response: String) -> IO<A>),
 }
+
+type IO.Net.Address {
+  ipv4(val0: U8, val1: U8, val2: U8, val3: U8, port: U16)
+}
+
+type IO.Net.Mail {
+  new(
+    from: IO.NetAddress
+    data: Buffer8
+  )
+}
+
+1. Melhorar o tipo IO, permitir spawn de threads
+  - Trabalhoso: atualizar compiladores, reescrever libs atuais
+2. Recriar o sistema de rooms com o novo tipo IO
+3. Simplificar o tipo App para ter apenas estado local
+4. Otimizações no compilador
+  - Clean-up geral no código do King, que é antigo
+  - Evitar stack overflows no back-end JavaScript
+  - Migrar o compilador do JavaScript para o Kind
+  - Otimizar o sistema de holes, igualdade, etc.
+5. Consertar o tipo Buffer8 para armazenar o length
+6. Criar um operador de Map.set (o atual, Mat.mut, não inicializa)
+
+type IO <A: Type> {
+  return(value: A)
+
+  // Prints a line to the console
+  put_line(text: String, then: Unit -> IO<A>)
+
+  // Gets a line from the user
+  get_line(then: String -> IO<A>)
+
+  // Fetches a URL
+  fetch(url: String, then: Unit -> IO<A>)
+
+  // Returns the current time, in milliseconds since epoch
+  get_time(then: Nat -> IO<A>)
+
+  // Returns the program argument list
+  get_args(then: List<String> -> IO<A>)
+
+  // Starts listening to an UDP port
+  init_udp(port: Nat, then: Bool -> IO<A>)
+
+  // Stops listening to an UDP port
+  stop_udp(port: Nat, then: Bool -> IO<A>)
+
+  // Sends an UDP packet
+  send_udp(port: U16, dest: IO.NetAddress, data: Buffer8, then: Unit -> IO<A>)
+
+  // Receives an incoming UDP message
+  receive_udp(then: Maybe<IO.Net.Mail> -> IO<A>)
+
+  // Waits a given amount of time
+  sleep(time: Nat, then: Unit -> IO<A>)
+
+  // Spawns a thread
+  timeout(program: IO<A>, then: Unit -> IO<A>)
+}
