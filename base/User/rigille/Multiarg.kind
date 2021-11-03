@@ -39,7 +39,7 @@ Variadic.together<A: Type, B: Type, C: Type, D: Type>(
       (x) Variadic.together<A, B, C, D>(n.pred, join, l(x), r(x))
   }!
 
-Variadic.equal<A: Type, B: Type>(
+Variadic.Equal<A: Type, B: Type>(
   n: Nat
   l: Variadic(n)<A, B>
   r: Variadic(n)<A, B>
@@ -48,7 +48,7 @@ Variadic.equal<A: Type, B: Type>(
     zero:
       Equal<B>(l, r)
     succ:
-      (x) Variadic.equal<A, B>(n.pred, l(x), r(x))
+      (x) Variadic.Equal<A, B>(n.pred, l(x), r(x))
   }!
 
 type Association <A: Type, op: A -> A -> A> ~ (c: Nat, exp: Variadic(c)<A, A>) {

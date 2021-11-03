@@ -1,0 +1,94 @@
+structure Equivalence<A: Type>(Eq: A -> A -> Type) :=
+  (refl: forall a: A, Eq(a, a)
+type Equivalence<A: Type>(Eq: A -> A -> Type) {
+  new(
+    refl: (a: A) -> Eq(a, a)
+    mirror: (a: A, b: A, H: Eq(a, b)) -> Eq(b, a)
+    trans: (a: A, b: A, c: A, H0: Eq(a, b), H1: Eq(b, c)) -> Eq(a, c)
+  )
+}
+
+type Equivalence.Eq<A: Type>(left: A -> A -> Type, right: A -> A -> Type) {
+  new(
+    lr: (a: A, b: A, H: left(a, b)) -> right(a, b)
+    rl: (a: A, b: A, H: right(a, b)) -> left(a, b)
+  )
+}
+
+type Equivalence.Lawful<A: Type> {
+  new(
+    val: A -> A -> Type
+    prop: Equivalence<A>(val)
+  )
+}
+
+Equivalence.Lawful.Eq<A: Type>(left: Equivalence.Lawful<A>, right: Equivalence.Lawful<A>): Type
+  case left right {
+    new new:
+      Equivalence.Eq<A>(left.val, right.val)
+  }
+
+Equivalence.Lawful.Eq.refl<A: Type>(
+  eq: Equivalence.Lawful<A>
+): Equivalence.Lawful.Eq<A>(eq, eq)
+  case eq {
+    new:
+      open eq.prop
+      Equivalence.Eq.new<A, eq.val, eq.val>((a, b, H) H, (a, b, H) H)
+  }! :: eq((left) Type,(left.val) (left.prop) eq((right) Type,(right.val) (right.prop) Equivalence.Eq(A,left.val,right.val)))
+
+Equivalence.Lawful.Eq.mirror<A: Type>(
+  eq0: Equivalence.Lawful<A>
+  eq1: Equivalence.Lawful<A>
+  H: Equivalence.Lawful.Eq<A>(eq0, eq1)
+): Equivalence.Lawful.Eq<A>(eq1, eq0)
+  let H = H :: eq0((left) Type,(left.val) (left.prop) eq1((right) Type,(right.val) (right.prop) Equivalence.Eq(A,left.val,right.val)))
+  case eq0 eq1 with H {
+    new new:
+      case H {
+        new:
+          Equivalence.Eq.new<A>(eq1.val, eq0.val, H.rl, H.lr)
+      }
+  }!
+
+Equivalence.Lawful.Eq.trans<A: Type>(
+  eq0: Equivalence.Lawful<A>
+  eq1: Equivalence.Lawful<A>
+  eq2: Equivalence.Lawful<A>
+  H0: Equivalence.Lawful.Eq<A>(eq0, eq1)
+  H1: Equivalence.Lawful.Eq<A>(eq1, eq2)
+): Equivalence.Lawful.Eq<A>(eq0, eq2)
+  let H0 = H0 :: eq0((left) Type,(left.val) (left.prop) eq1((right) Type,(right.val) (right.prop) Equivalence.Eq(A,left.val,right.val)))
+  let H1 = H1 :: eq1((left) Type,(left.val) (left.prop) eq2((right) Type,(right.val) (right.prop) Equivalence.Eq(A,left.val,right.val)))
+  case eq0 eq1 eq2 with H0 H1 {
+    new new new:
+      case H0 H1 {
+        new new:
+          Equivalence.Eq.new<A>(eq0.val, eq2.val, (a, b, H) H1.lr(a, b, H0.lr(a, b, H)), (a, b, H) H0.rl(a, b, H1.rl(a, b, H)))
+      }
+  }!
+
+Equivalence.Lawful.prop<A: Type>: Equivalence<Equivalence.Lawful<A>>(Equivalence.Lawful.Eq<A>)
+  Equivalence.new(
+    Equivalence.Lawful<A>, Equivalence.Lawful.Eq<A>,
+    Equivalence.Lawful.Eq.refl<A>
+    Equivalence.Lawful.Eq.mirror<A>
+    Equivalence.Lawful.Eq.trans<A>
+  )
+
+Equivalence.Lawful.Equivalence.Lawful<
+  A: Type
+>: Equivalence.Lawful<Equivalence.Lawful<A>>
+  Equivalence.Lawful.new<Equivalence.Lawful<A>>(
+    Equivalence.Lawful.Eq<A>,
+    Equivalence.Lawful.prop<A>
+  )
+
+Equivalence.Compatible<
+  From: Type, To: Type
+>(From.Eq: From -> From -> Type
+  To.Eq: To -> To -> Type
+  f: From -> To
+): Type
+  (a: From, b: From, H: From.Eq(a, b)) -> To.Eq(f(a), f(b))
+

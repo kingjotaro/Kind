@@ -1,0 +1,9 @@
+// puts function application out in presence of a rewrite
+// TODO write an induction principle for variadic functions
+Variadic.induction_step<T: Type>(
+  a: Nat, b: Nat, e: Equal<Nat, a, b>, f: Variadic(Nat.succ(a), T, T), t: T
+): Equal<Variadic(b, T, T)>(Equal.rewrite<Nat>(a, b, e, (X) Variadic(X, T, T), f(t)), Equal.rewrite<Nat>(Nat.succ(a), Nat.succ(b), apply(Nat.succ,e), (X) Variadic(X, T, T), f)(t))
+  case e {
+    refl:
+      refl
+  }!

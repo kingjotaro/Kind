@@ -1,0 +1,18 @@
+Variadic.equal.mirror<A: Type, B: Type>(
+  n: Nat
+  l: Variadic(n)<A, B>
+  r: Variadic(n)<A, B>
+  Hyp: Variadic.Forall(n, A, Variadic.equal<A, B>(n, l, r))
+): Variadic.Forall(n, A, Variadic.equal<A, B>(n, r, l))
+  (case n {
+    zero:
+      (l, r, Hyp)
+        mirror(Hyp)
+    succ:
+      (l, r, Hyp, a)
+        Variadic.equal.mirror<A, B>(n.pred, l(a), r(a), Hyp(a))
+  }: (l: Variadic(n)<A, B>
+      r: Variadic(n)<A, B>
+      Hyp: Variadic.Forall(n, A, Variadic.equal<A, B>(n, l, r))
+    ) ->
+    Variadic.Forall(n, A, Variadic.equal<A, B>(n, r, l)))(l, r, Hyp)

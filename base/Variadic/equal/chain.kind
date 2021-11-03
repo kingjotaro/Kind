@@ -1,0 +1,21 @@
+Variadic.equal.chain<A: Type, B: Type>(
+  n: Nat
+  a: Variadic(n)<A, B>
+  b: Variadic(n)<A, B>
+  c: Variadic(n)<A, B>
+  H0: Variadic.Forall(n, A, Variadic.equal<A, B>(n, a, b))
+  H1: Variadic.Forall(n, A, Variadic.equal<A, B>(n, b, c))
+): Variadic.Forall(n, A, Variadic.equal<A, B>(n, a, c))
+  (case n {
+    zero:
+      (a, b, c, H0, H1)
+        chain(H0, H1)
+    succ:
+      (a, b, c, H0, H1, x)
+        Variadic.equal.chain<A, B>(n.pred, a(x), b(x), c(x), H0(x), H1(x))
+  }: (a: Variadic(n)<A, B>
+      b: Variadic(n)<A, B>
+      c: Variadic(n)<A, B>
+      H0: Variadic.Forall(n, A, Variadic.equal<A, B>(n, a, b))
+      H1: Variadic.Forall(n, A, Variadic.equal<A, B>(n, b, c))
+    ) -> Variadic.Forall(n, A, Variadic.equal<A, B>(n, a, c)))(a, b, c, H0, H1)

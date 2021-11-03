@@ -1,0 +1,23 @@
+Variadic.eql<A: Type, B: Type>(
+  n: Nat
+  m: Nat
+  H: Equal<Bool>(Nat.eql(n, m), true)
+  l: Variadic(n)<A, B>
+  r: Variadic(m)<A, B>
+): Variadic(n)<A, Type>
+  case n with l H {
+    zero:
+      case m with r H {
+        zero:
+          Equal<B>(l, r)
+        succ:
+          Empty.absurd!(Bool.false_neq_true(H))
+      }!
+    succ:
+      case m with r H {
+        zero:
+          Empty.absurd!(Bool.false_neq_true(H))
+        succ:
+          (x) Variadic.eql<A, B>(n.pred, m.pred, H, l(x), r(x))
+      }!
+  }!

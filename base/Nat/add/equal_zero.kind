@@ -1,0 +1,14 @@
+Nat.add.equal_zero(n: Nat, m: Nat, Hyp: Nat.add(n, m) == 0): And<n == 0, m == 0>
+  case n with Hyp {
+    zero:
+      case m with Hyp {
+        zero:
+          {refl, refl}
+        succ:
+          let contra = Nat.succ_neq_zero!(Hyp)
+          Empty.absurd!(contra)
+      }!
+    succ:
+      let contra = Nat.succ_neq_zero!(Hyp)
+      Empty.absurd!(contra)
+  }!

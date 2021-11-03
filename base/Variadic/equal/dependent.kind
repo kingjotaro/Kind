@@ -1,0 +1,27 @@
+Variadic.equal.dependent<A: Type, B: Type>(
+  a: Nat, b: Nat, e: Equal<Nat, a, b>
+  P: Nat -> Type
+  x: P(a), f: (n: Nat, val: P(n)) -> Variadic(n)<A, B>
+): def rewrite = Equal.rewrite<Nat>(a, b, e)
+   Variadic.Forall(b, A,
+     Variadic.equal(A, B, b,
+       f(b, rewrite((X) P(X) x))
+       rewrite(
+         (X) Variadic(X, A, B),
+         f(a, x)
+       )
+     )
+   )
+  case e {
+    refl:
+      Variadic.equal.refl<A, B>(a, f(a, x))
+  }: def rewrite = Equal.rewrite<Nat>(a, e.b, e)
+   Variadic.Forall(e.b, A,
+     Variadic.equal(A, B, e.b,
+       f(e.b, rewrite((X) P(X) x))
+       rewrite(
+         (X) Variadic(X, A, B),
+         f(a, x)
+       )
+     )
+   )

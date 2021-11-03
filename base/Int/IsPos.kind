@@ -1,0 +1,10 @@
+Int.IsPos(i: Int): Type
+  case i {
+    new:
+      case i.pos {
+        zero:
+          Empty
+        succ:
+          Unit
+      }
+  }

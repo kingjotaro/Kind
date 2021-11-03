@@ -1,0 +1,10 @@
+Int.IsNeg(i: Int): Type
+  case i {
+    new:
+      case i.neg {
+        zero:
+          Empty
+        succ:
+          Unit
+      }
+  }

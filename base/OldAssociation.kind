@@ -1,0 +1,614 @@
+//Qual.refl(A: Type, a: A): Qual(A, a, a)
+//  (P, r) r
+
+typeof<A: Type>(a: A): Type
+  A
+
+// Size association
+type SAssociation ~ (size: Nat) {
+  var ~ (size = 1),
+  op(n: Nat, m: Nat, left: SAssociation(n), right: SAssociation(m)) ~ (size = Nat.add(n, m))
+}
+
+type Association {
+  var
+  op(left: Association, right: Association)
+}
+
+//((a + b) + c) + d
+//(a + b) + (c + d)
+//a + (b + (c + d))
+//a + (b + (c + d))
+//
+//type SAssociation.Equiv ~ (n: Nat, a: SAssociation(n), b: SAssociation(n)) {
+//  refl(n: Nat, s: SAssociation(n)) ~ (n = n, a = s, b = s)
+//  chain(
+//    n: Nat
+//    s0: SAssociation(n), s1: SAssociation(n), s2: SAssociation(n)
+//    H0: SAssociation.Equiv(n, s0, s1), H1: SAssociation.Equiv(n, s1, s2)
+//  ) ~ (n = n, a = s0, b = s2)
+//  assoc(
+//    n0: Nat, n1: Nat, n2: Nat
+//    s0: SAssociation(n0), s1: SAssociation(n1), s2: SAssociation(n2)
+//  ) ~ (
+//    n = Nat.add(n0, Nat.add(n1, n2))
+//    a = SAssociation.op(n0, Nat.add(n1, n2), s0, SAssociation.op(n1, n2, s1, s2))
+//    b = Equal.rewrite<Nat>(
+//      Nat.add(Nat.add(n0, n1), n2), Nat.add(n0, Nat.add(n1, n2))
+//      Equal.mirror<Nat>(Nat.add(n0, Nat.add(n1, n2)), Nat.add(Nat.add(n0, n1), n2), Nat.add.assoc(n0, n1, n2))
+//}
+
+//type Association {
+//  var
+//  op(left: Association, right: Association)
+//}
+//
+//Association.mul(a: Association, b: Association): Association
+//  Association.op(a, b)
+//
+//Association.add(a: Association, b: Association): Association
+//  Association.op(a, b)
+
+Association.join<A: Type>(
+  n: Nat
+  m: Nat
+  op: A -> A -> A
+  l: Variadic(n)<A, A>
+  r: Variadic(m)<A, A>
+): Variadic(Nat.add(n, m))<A, A>
+  Variadic.join<A, A, A, A>(n, m, op, l, r)
+
+//Association.show(exp: Association): String
+//  case exp {
+//    var:
+//      "x"
+//    op:
+//      "("|Association.show(exp.left)|" + "|Association.show(exp.right)|")"
+//  }
+
+//Association.size(exp: Association): Nat
+//  case exp {
+//    var:
+//      1
+//    op:
+//      let left = Association.size(exp.left)
+//      let right = Association.size(exp.right)
+//      Nat.add(left, right)
+//  }
+
+SAssociation.subst<A: Type>(op: A -> A -> A, n: Nat, exp: SAssociation(n)): Variadic(n, A, A)
+  case exp {
+    var:
+      (x) x
+    op:
+      Association.join<A>(
+        exp.n, exp.m
+        op
+        SAssociation.subst<A>(op, exp.n, exp.left)
+        SAssociation.subst<A>(op, exp.m, exp.right)
+      )
+  }!
+
+//vl(a + b, c)
+//vl(a + b + c, d) == vl(a, (b + c) + d
+//vl((a + b) + c, d) == vl(a + b, c + d) == vl(a, b + (c + d))
+
+Association.join.assoc.type<A: Type>(
+  op: A -> A -> A
+  assoc: (a: A, b: A, c: A) -> Equal<A>(op(op(a, b), c), op(a, op(b, c)))
+  n0: Nat, n1: Nat, n2: Nat
+  e0: Variadic(n0)<A, A>
+  e1: Variadic(n1)<A, A>
+  e2: Variadic(n2)<A, A>
+): Type
+// rewrite(join(e0, join(e1, e2))) == join(join(e0, e1), e2)
+  let right_right = Association.join<A>(n1, n2, op, e1, e2)
+  let pre_right = Association.join<A>(n0, Nat.add(n1, n2), op, e0, right_right)
+  // rewrite so that Variadic.equal typechecks
+  let right = Equal.rewrite<Nat>(
+    Nat.add(n0, Nat.add(n1, n2)), Nat.add(Nat.add(n0, n1), n2)
+    mirror(Nat.add.assoc(n0, n1, n2))
+    (X) Variadic(X)<A, A>
+    pre_right
+  )
+  let left_left = Association.join<A>(n0, n1, op, e0, e1)
+  let left = Association.join<A>(Nat.add(n0, n1), n2, op, left_left, e2)
+  Variadic.Forall(Nat.add(Nat.add(n0, n1), n2), A, Variadic.equal<A, A>(Nat.add(Nat.add(n0, n1), n2), right, left))
+
+//Association.join.assoc.base.base<A: Type>(
+//  op: A -> A -> A
+//  assoc: (a: A, b: A, c: A) -> Equal<A>(op(op(a, b), c), op(a, op(b, c)))
+//  n2: Nat
+//  e0: A
+//  e1: A
+//  e2: Variadic(n2)<A, A>
+//): Variadic.Forall(n2,A,Variadic.equal(A,A,n2,Variadic.wrap(A,A,A,n2,op(op(e0,e1)),e2),Variadic.wrap(A,A,A,n2,op(e0),Variadic.wrap(A,A,A,n2,op(e1),e2))))
+//  (case n2 {
+//    zero:
+//      (e2)
+//        assoc(e0, e1, e2)
+//    succ:
+//      (e2, a)
+//        Association.join.assoc.base.base<A>(op, assoc, n2.pred, e0, e1, e2(a))
+//  }: (e2: Variadic(n2)<A, A>) -> Variadic.Forall(n2,A,Variadic.equal(A,A,n2,Variadic.wrap(A,A,A,n2,op(op(e0,e1)),e2),Variadic.wrap(A,A,A,n2,op(e0),Variadic.wrap(A,A,A,n2,op(e1),e2)))))(
+//    e2
+//  )
+//
+//Association.join.assoc.base<A: Type>(
+//  op: A -> A -> A
+//  assoc: (a: A, b: A, c: A) -> Equal<A>(op(op(a, b), c), op(a, op(b, c)))
+//  n1: Nat, n2: Nat
+//  e0: A
+//  e1: Variadic(n1)<A, A>
+//  e2: Variadic(n2)<A, A>
+//): Variadic.Forall(
+//     Nat.add(n1,n2), A
+//     Variadic.equal(
+//       A, A
+//       Nat.add(n1, n2)
+//       Association.join(A,n1,n2,op,Variadic.wrap(A,A,A,n1,op(e0),e1),e2)
+//       Variadic.wrap(A,A,A,Nat.add(n1,n2),op(e0),Association.join(A,n1,n2,op,e1,e2))
+//     )
+//   )
+//  (case n1 {
+//    zero:
+//      (e1)
+//        Association.join.assoc.base.base<A>(op, assoc, n2, e0, e1, e2)
+//    succ:
+//      (e1, a)
+//        Association.join.assoc.base<A>(op, assoc, n1.pred, n2, e0, e1(a), e2)
+//  }: (e1: Variadic(n1)<A, A>) -> Variadic.Forall(
+//    Nat.add(n1,n2), A
+//    Variadic.equal(
+//      A, A
+//      Nat.add(n1, n2)
+//      Association.join(A,n1,n2,op,Variadic.wrap(A,A,A,n1,op(e0),e1),e2)
+//      Variadic.wrap(A,A,A,Nat.add(n1,n2),op(e0),Association.join(A,n1,n2,op,e1,e2))
+//    )
+//  ))(
+//    e1
+//  )
+
+
+Association.join.assoc<A: Type>(
+  op: A -> A -> A
+  assoc: (a: A, b: A, c: A) -> Equal<A>(op(op(a, b), c), op(a, op(b, c)))
+  n0: Nat, n1: Nat, n2: Nat
+  e0: Variadic(n0)<A, A>
+  e1: Variadic(n1)<A, A>
+  e2: Variadic(n2)<A, A>
+): Association.join.assoc.type<A>(op, assoc, n0, n1, n2, e0, e1, e2)
+  // TODO repair proof
+  Association.join.assoc<A>(
+    op
+    assoc
+    n0, n1, n2
+    e0
+    e1
+    e2
+  )
+//  (case n0 {
+//    zero:
+//      (e0)
+//        Association.join.assoc.base<A>(op, assoc, n1, n2, e0, e1, e2)
+//    succ:
+//      (e0, a)
+//        let lemma = Association.join.assoc<A>(op, assoc, n0.pred, n1, n2, e0(a), e1, e2)
+//        // TODO most hardcore test ever for the motive: prove this via case Nat.add.assoc(n0.pred, n1, n2)
+//        let qed = Equal.rewrite(
+//          Variadic(Nat.add(n0.pred, Nat.add(n1,n2)), A, A)
+//          Equal.rewrite(
+//            Nat, Nat.add(Nat.add(n0.pred,n1),n2), Nat.add(n0.pred,Nat.add(n1,n2)),Nat.add.assoc(n0.pred,n1,n2),(X) Variadic(X,A,A)
+//            Association.join(A, Nat.add(Nat.succ(n0.pred),n1), n2, op, Association.join(A, Nat.succ(n0.pred), n1, op, e0, e1), e2)(a)
+//          )
+//          Equal.rewrite(
+//            Nat, Nat.add(Nat.add(Nat.succ(n0.pred),n1),n2), Nat.add(Nat.succ(n0.pred), Nat.add(n1,n2)), Nat.add.assoc(Nat.succ(n0.pred), n1, n2)
+//            (X) Variadic(X,A,A)
+//            Association.join(A,Nat.add(Nat.succ(n0.pred),n1),n2,op,Association.join(A,Nat.succ(n0.pred),n1,op,e0,e1),e2))(a)
+//          Variadic.induction_step<A>(
+//            Nat.add(Nat.add(n0.pred,n1),n2), Nat.add(n0.pred, Nat.add(n1,n2)), Nat.add.assoc(n0.pred, n1, n2)
+//            Association.join(A,Nat.add(Nat.succ(n0.pred),n1),n2,op,Association.join(A,Nat.succ(n0.pred),n1,op,e0,e1),e2)
+//            a
+//          )
+//          (X)
+//            Variadic.Forall(
+//              Nat.add(n0.pred,Nat.add(n1,n2)), A
+//              Variadic.equal(
+//                A, A, Nat.add(n0.pred, Nat.add(n1,n2))
+//                X
+//                Association.join(A, n0.pred, Nat.add(n1,n2), op, e0(a), Association.join(A,n1,n2,op,e1,e2))
+//              )
+//            )
+//          lemma
+//        )
+//        qed
+////(k: A) -> join(join(a, b), c) == join(a, join(b, c))
+////join(join(a, b), c)(k) == rewrite(join(a, join(b, c)))(k)
+////join(join(a, b), c)(k) == rewrite(join(a, join(b, c))(k))
+////join(join(a, b), c)(k) == rewrite(join(a(k), join(b, c)(k)))
+////join(join(a, b)(k), c) == join(a(k), join(b, c))
+////join(join(a(k), b), c) == join(a(k), join(b, c))
+//  }: (e0: Variadic(n0)<A, A>) -> Association.join.assoc.type<A>(op, assoc, n0, n1, n2, e0, e1, e2))(
+//    e0
+//  )
+
+SAssociation.make_right(n: Nat, exp: SAssociation(n)): SAssociation(n)
+  case exp {
+    var:
+      SAssociation.var
+    op:
+      SAssociation.make_right.go(exp.n, exp.m, exp.left, exp.right)
+  }!
+
+SAssociation.make_right.go(n: Nat, m: Nat, left: SAssociation(n), right: SAssociation(m)): SAssociation(Nat.add(n, m))
+  case left {
+    var:
+      case right {
+        var:
+          SAssociation.op(1, 1, SAssociation.var, SAssociation.var)
+        op:
+          let new_right = SAssociation.make_right.go(right.n, right.m, right.left, right.right)
+          SAssociation.op(1, Nat.add(right.n, right.m), SAssociation.var, new_right)
+      }!
+    op:
+      let lemma = SAssociation.make_right.go(left.n, Nat.add(left.m, m), left.left, SAssociation.op(left.m, m, left.right, right))
+      let ret = Equal.rewrite<Nat>(
+        Nat.add(left.n, Nat.add(left.m,m)), Nat.add(Nat.add(left.n, left.m), m)
+        mirror(Nat.add.assoc(left.n, left.m, m))
+        (X) SAssociation(X)
+        lemma
+      )
+      ret
+  }!
+
+
+// rewrite(x) = x ----
+
+// rewrite(y) = rewrite(z) -> y = z
+// rewrite(y)(x) = rewrite(y(x))
+
+// rewrite(subst((a + b) + c)) = subst(a + (b + c))
+
+// make_right(x, exp) = x + exp
+// make_right(exp0 + exp1, exp2) = rewrite(make_right(exp0, exp1 + exp2))
+
+// subst(make_right(exp0, exp1)) = subst(exp0 + exp1)
+
+Association.make_right.equal.go<A: Type>(
+  op: A -> A -> A
+  assoc: (a: A, b: A, c: A) -> Equal<A>(op(op(a, b), c), op(a, op(b, c)))
+  n: Nat, m: Nat
+  left: SAssociation(n)
+  right: SAssociation(m)
+): Variadic.Forall(
+     Nat.add(n, m), A
+     Variadic.equal(
+       A, A, Nat.add(n, m)
+       SAssociation.subst<A>(op, Nat.add(n, m), SAssociation.make_right.go(n, m, left, right))
+       SAssociation.subst<A>(op, Nat.add(n, m), SAssociation.op(n, m, left, right))
+     )
+   )
+  Association.make_right.equal.go<A>(
+    op
+    assoc
+    n, m
+    left
+    right
+  )
+  // TODO smart motive doesn't work here
+//  case left {
+//    var:
+//      Variadic.equal.refl<A, A>(Nat.add(1, m), SAssociation.subst(A,op,Nat.add(1,m),SAssociation.make_right.go(1,m,SAssociation.var,right)))
+//    op:
+//      // # proof sketch
+//      // ind: subst(make_right.go(left.left, left.right + right)) == subst(left + (left.right + right)) ok!
+//      //      subst(rewrite(make_right.go(left.left, left.right + right))) == subst(rewrite(left + (left.right + right))) ok!
+//
+//      // lemma: subst(rewrite(left + (left.right + right))) = subst((left + left.right) + right)
+//
+//      // goal: subst(make_right.go(left.left + left.right, right)) == subst(left.left + left.right, right) ok!
+//      //       subst(rewrite(make_right.go(left.left, left.right + right))) == subst(left.left + left.right, right) ok!
+//      let ind = Association.make_right.equal.go<A>(
+//        op
+//        assoc
+//        left.n, Nat.add(left.m, m)
+//        left.left
+//        SAssociation.op(left.m, m, left.right, right)
+//      )
+//      let left_right_eq = Variadic.equal.rewrite<A, A>(
+//        Nat.add(left.n, Nat.add(left.m, m)), Nat.add(Nat.add(left.n, left.m), m)
+//        mirror(Nat.add.assoc(left.n, left.m, m))
+//        SAssociation.subst(A,op,Nat.add(left.n,Nat.add(left.m,m)),SAssociation.make_right.go(left.n,Nat.add(left.m,m),left.left,SAssociation.op(left.m,m,left.right,right)))
+//        SAssociation.subst(A,op,Nat.add(left.n,Nat.add(left.m,m)),SAssociation.op(left.n,Nat.add(left.m,m),left.left,SAssociation.op(left.m,m,left.right,right)))
+//        ind
+//      )
+//      let left_left_eq = Variadic.equal.dependent<A, A>(
+//        Nat.add(left.n, Nat.add(left.m, m)), Nat.add(Nat.add(left.n, left.m), m)
+//        mirror(Nat.add.assoc(left.n, left.m, m))
+//        SAssociation
+//        SAssociation.make_right.go(left.n,Nat.add(left.m,m),left.left,SAssociation.op(left.m,m,left.right,right))
+//        (n, val) SAssociation.subst(A, op, n, val)
+//      )
+//
+//      let left_eq = Variadic.equal.chain<A, A>(
+//        Nat.add(Nat.add(left.n, left.m), m)
+//        _, _, _,
+//        left_left_eq
+//        left_right_eq
+//      )
+//        
+//      let right_eq = Association.join.assoc<A>(
+//        op
+//        assoc
+//        left.n, left.m, m
+//        SAssociation.subst(A, op, left.n, left.left)
+//        SAssociation.subst(A, op, left.m, left.right)
+//        SAssociation.subst(A, op, m, right)
+//      )
+//      let qed = Variadic.equal.chain<A, A>(
+//        Nat.add(Nat.add(left.n, left.m), m)
+//        _, _, _,
+//        left_eq
+//        right_eq
+//      )
+//      qed
+//  }: Variadic.Forall(
+//       Nat.add(left.size, m), A
+//       Variadic.equal(
+//         A, A, Nat.add(left.size, m)
+//         SAssociation.subst<A>(op, Nat.add(left.size, m), SAssociation.make_right.go(left.size, m, left, right))
+//         SAssociation.subst<A>(op, Nat.add(left.size, m), SAssociation.op(left.size, m, left, right))
+//       )
+//     )
+
+SAssociation.all_right(n: Nat): SAssociation(Nat.succ(n))
+  case n {
+    zero:
+      SAssociation.var
+    succ:
+      SAssociation.op(1, Nat.succ(n.pred), SAssociation.var, SAssociation.all_right(n.pred))
+  }!
+
+SAssociation.not_zero(exp: SAssociation(0)): Empty
+  let contra = refl :: 0 == 0
+  (case exp {
+    var:
+      (contra)
+        Nat.one_neq_zero(contra)
+    op:
+      (contra)
+        use lemma = Nat.add.equal_zero!!(contra)
+        let exp.left = exp.left :: rewrite X in SAssociation(X) with lemma.fst
+        SAssociation.not_zero(exp.left)
+  }: (contra: exp.size == 0) -> Empty)(contra)
+
+SAssociation.is_var(n: Nat, exp: SAssociation(n)): Type
+  case exp {
+    var:
+      Unit
+    op:
+      Empty
+  }
+
+SAssociation.one_then_var.aux(exp: SAssociation(1)): SAssociation.is_var(1, exp)
+  let lemma = refl :: 1 == 1
+  (case exp {
+    var:
+      (lemma)
+        unit
+    op:
+      (lemma)
+        (case exp.n {
+          zero:
+            (exp.left, lemma)
+              Empty.absurd!(SAssociation.not_zero(exp.left))
+          succ:
+            (exp.left, lemma)
+              (case exp.m {
+                zero:
+                  (exp.right, lemma)
+                    Empty.absurd!(SAssociation.not_zero(exp.right))
+                succ:
+                  (exp.right, lemma)
+                    let lemma_left = mirror(Nat.add.succ_right(Nat.succ(exp.n.pred), exp.m.pred))
+                    let lemma = chain(lemma_left, lemma)
+                    let lemma = apply(Nat.pred, lemma)
+                    Empty.absurd!(Nat.succ_neq_zero(Nat.add(exp.n.pred, exp.m.pred), lemma))
+              }: (
+                exp.right: SAssociation(exp.m)
+                lemma: Nat.add(Nat.succ(exp.n.pred), exp.m) == 1
+              ) -> SAssociation.is_var(Nat.add(Nat.succ(exp.n.pred), exp.m), SAssociation.op(Nat.succ(exp.n.pred),exp.m,exp.left,exp.right)))(
+                exp.right
+                lemma
+              )
+        }: (
+          exp.left: SAssociation(exp.n)
+          lemma: Nat.add(exp.n, exp.m) == 1
+        ) -> SAssociation.is_var(Nat.add(exp.n, exp.m), SAssociation.op(exp.n,exp.m,exp.left,exp.right)))(
+          exp.left
+          lemma
+        )
+  }: (lemma: exp.size == 1) -> SAssociation.is_var(exp.size, exp))(
+    lemma
+  )
+
+//SAssociation.one_equal(exp0: SAssociation(1), exp1: SAssociation(1)): exp0 == exp1
+//  (case exp0 {
+//    var:
+//      (exp1)
+//        case exp1 {
+//          var:
+//            ?var
+//          op:
+//            ?op
+//        }: Equal<SAssociation(exp1.size)>(SAssociation.var, exp1)
+//    op:
+//      (exp1)
+//      ?op
+//  }: (exp1: SAssociation(exp0.size)) -> Equal<SAssociation(exp0.size)>(exp0, exp1))(
+//    exp1
+//  )
+
+//SAssociation.eq(n0: Nat, n1: Nat, exp0: SAssociation(n0), exp1: SAssociation(n1)): Bool
+//  case exp0 {
+//    var:
+//      case exp1 {
+//        var:
+//          true
+//        op:
+//          false
+//      }
+//    op:
+//      case exp1 {
+//        var:
+//          false
+//        op:
+//          SAssociation.eq(exp0.n, exp1.n, exp0.left, exp1.left) && SAssociation.eq(exp0.m, exp1.m, exp0.right, exp1.right)
+//      }
+//  }
+
+//SAssociation.make_right.ok(n: Nat, exp: SAssociation(Nat.succ(n))): SAssociation.make_right(Nat.succ(n), exp) == SAssociation.all_right(n)
+//  (case n {
+//    zero:
+//      (exp)
+//        let lemma = SAssociation.one_then_var(exp)
+//        (case exp {
+//          var:
+//            ?var
+//          op:
+//            ?op
+//        }: (lemma: SAssociation.is_var(exp.size, exp)) -> )(lemma)
+//    succ:
+//      (exp)
+//        ?succ
+//  }: (exp: SAssociation(Nat.succ(n))) -> Equal<SAssociation(Nat.succ(n))>(SAssociation.make_right(Nat.succ(n), exp), SAssociation.all_right(n)))(
+//    exp
+//  )
+
+Association.from_sassociation(n: Nat, exp: SAssociation(n)): Association
+  case exp {
+    var:
+      Association.var
+    op:
+      Association.op(
+        Association.from_sassociation(exp.n, exp.left)
+        Association.from_sassociation(exp.m, exp.right)
+      )
+  }
+
+Association.make_right(exp: Association): Association
+  case exp {
+    var:
+      Association.var
+    op:
+      Association.make_right.go(exp.left, exp.right)
+  }
+
+Association.make_right.go(left: Association, right: Association): Association
+  case left {
+    var:
+      case right {
+        var:
+          Association.op(Association.var, Association.var)
+        op:
+          Association.op(Association.var, Association.make_right.go(right.left, right.right))
+      }
+    op:
+      Association.make_right.go(left.left, Association.op(left.right, right))
+  }
+
+Association.all_right(n: Nat): Association
+  case n {
+    zero:
+      Association.var
+    succ:
+      Association.op(Association.var, Association.all_right(n.pred))
+  }
+
+Association.size(exp: Association): Nat
+  case exp {
+    var:
+      1
+    op:
+      Association.size(exp.left) + Association.size(exp.right)
+  }
+
+//Association.make_right.ok(exp: Association): Association.make_right(exp) == Association.all_right(Nat.pred(Association.size(exp)))
+//  case exp {
+//    var:
+//      refl
+//    op:
+//      ?op
+//  }!
+
+Association.size.not_zero(exp: Association, contra: Association.size(exp) == 0): Empty
+  case exp with contra {
+    var:
+      Nat.one_neq_zero(contra)
+    op:
+      use lemma = Nat.add.equal_zero!!(contra)
+      Association.size.not_zero(exp.left, lemma.fst)
+  }!
+
+Association.make_right.go.ok(
+  left: Association, right: Association
+): Association.make_right.go(left, right) == Association.all_right(Nat.pred(Nat.add(Association.size(left), Association.size(right))))
+  case left {
+    var:
+      case right {
+        var:
+          refl
+        op:
+          let lemma = Association.make_right.go.ok(right.left, right.right)
+          let qed = apply(Association.op(Association.var), lemma)
+          let contra = refl :: Association.size(right.left) == Association.size(right.left)
+          def size_right_left = Association.size(right.left)
+          case size_right_left with contra: ^size_right_left == size_right_left
+          qed: Association.op(Association.var,Association.make_right.go(right.left,right.right)) == Association.op(Association.var,Association.all_right(Nat.pred(Nat.add(size_right_left,Association.size(right.right))))) {
+            zero:
+              Empty.absurd!(Association.size.not_zero!(contra))
+            succ:
+              qed
+          }! :: Equal<Association>(Association.make_right.go(Association.var,Association.op(right.left,right.right)), Association.all_right(Nat.pred(Nat.add(Association.size(Association.var),Nat.add(size_right_left,Association.size(right.right))))))
+      }!
+    op:
+      let lemma = Association.make_right.go.ok(left.left, Association.op(left.right, right))
+      let qed = lemma :: rewrite X in Association.make_right.go(left.left,Association.op(left.right,right)) == Association.all_right(Nat.pred(X)) with mirror(Nat.add.assoc(Association.size(left.left), Association.size(left.right), Association.size(right)))
+      qed
+  }!
+
+Association.one_then_var(exp: Association, H: Association.size(exp) == 1): exp == Association.var
+  case exp with H {
+    var:
+      refl
+    op:
+      let H = H :: Nat.add(Association.size(exp.left), Association.size(exp.right)) == 1
+      let contra_exp_left = refl :: Association.size(exp.left) == Association.size(exp.left)
+      def exp.left.size = Association.size(exp.left)
+      case exp.left.size with 
+        H: Nat.add(exp.left.size, Association.size(exp.right)) == 1;
+        contra_exp_left: ^exp.left.size == Association.size(exp.left) {
+        zero:
+          Empty.absurd!(Association.size.not_zero!(contra_exp_left))
+        succ:
+          let contra_exp_right = refl :: Association.size(exp.right) == Association.size(exp.right)
+          def exp.right.size = Association.size(exp.right)
+          case exp.right.size with 
+            H: Nat.add(Nat.succ(exp.left.size.pred), exp.right.size) == 1
+            contra_exp_right: ^exp.right.size == Association.size(exp.right) {
+            zero:
+              Empty.absurd!(Association.size.not_zero!(contra_exp_right))
+            succ:
+              let left_lemma = mirror(Nat.add.succ_right(Nat.succ(exp.left.size.pred),exp.right.size.pred))
+              let lemma = chain(left_lemma, H)
+              let contra = apply(Nat.pred, lemma)
+              Empty.absurd!(Nat.succ_neq_zero!(contra))
+          }!
+      }!
+  }!
+
+
+
+//Test(a: Nat): ((a + a) + a) + a + a == a + a + a + a + a
+//  def x = Association.var
+//  Association.canonicalize(((x + x) + x) + x + x, a, a, a, a, a)

@@ -1,0 +1,28 @@
+Int.induction(
+  P: Int -> Type
+  back: (n: Nat) -> P(Int.new(0, Nat.succ(n)))
+  base: P(Int.new(0, 0))
+  front: (n: Nat) -> P(Int.new(Nat.succ(n), 0))
+  i: Int
+): P(i)
+  case i {
+    new:
+      case i.neg {
+        zero:
+          case i.pos {
+            zero:
+              base
+            succ:
+              front(i.pos.pred)
+          }!
+        succ:
+          case i.pos {
+            zero:
+              back(i.neg.pred)
+            succ:
+              let ind = Int.induction(P, back, base, front, Int.new(i.pos.pred, i.neg.pred))
+              let qed = ind :: rewrite X in P(X) with Int.succ_both(i.pos.pred, i.neg.pred)
+              qed
+          }!
+      }!
+  }!

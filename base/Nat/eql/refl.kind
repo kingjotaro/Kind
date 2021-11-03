@@ -1,0 +1,7 @@
+Nat.eql.refl(n: Nat): Equal<Bool>(Nat.eql(n, n), true)
+  case n {
+    zero:
+      refl
+    succ:
+      Nat.eql.refl(n.pred)
+  }!

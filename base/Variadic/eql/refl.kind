@@ -1,0 +1,12 @@
+Variadic.eql.refl<A: Type, B: Type>(
+  n: Nat
+  a: Variadic(n)<A, B>
+): Variadic.Forall(n, A, Variadic.eql<A, B>(n, n, Nat.eql.refl(n), a, a))
+  (case n {
+    zero:
+      (a)
+        refl
+    succ:
+      (a, x)
+        Variadic.eql.refl<A, B>(n.pred, a(x))
+  }: (a: Variadic(n)<A, B>) -> Variadic.Forall(n, A, Variadic.eql<A, B>(n, n, Nat.eql.refl(n), a, a)))(a)

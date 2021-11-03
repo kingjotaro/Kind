@@ -1,0 +1,13 @@
+Variadic.join<A: Type, B: Type, C: Type, D: Type>(
+  n: Nat
+  m: Nat
+  join: B -> C -> D
+  l: Variadic(n)<A, B>
+  r: Variadic(m)<A, C>
+): Variadic(Nat.add(n, m))<A, D>
+  case n with l {
+    zero:
+      Variadic.wrap<A, C, D>(m, join(l), r)
+    succ:
+      (x) Variadic.join<A, B, C, D>(n.pred, m, join, l(x), r)
+  }!

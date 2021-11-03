@@ -1,0 +1,115 @@
+type Association {
+  var
+  op(left: Association, right: Association)
+}
+
+Association.size(exp: Association): Nat
+  ?size
+
+Association.subst<A: Type>(op: A -> A -> A, exp: Association): Variadic(Association.size(exp), A, A)
+  ?subst
+
+Association.make_right(exp: Association): Association
+  case exp {
+    var:
+      Association.var
+    op:
+      Association.make_right.go(exp.left, exp.right)
+  }
+
+Association.make_right.go(left: Association, right: Association): Association
+  case left {
+    var:
+      case right {
+        var:
+          Association.op(Association.var, Association.var)
+        op:
+          Association.op(Association.var, Association.make_right.go(right.left, right.right))
+      }
+    op:
+      Association.make_right.go(left.left, Association.op(left.right, right))
+  }
+
+Association.all_right(n: Nat): Association
+  case n {
+    zero:
+      Association.var
+    succ:
+      Association.op(Association.var, Association.all_right(n.pred))
+  }
+
+Association.make_right.ok(
+  exp: Association
+): Equal<Association>(
+  Association.make_right(exp)
+  Association.all_right(Nat.pred(Association.size(exp)))
+)
+  ?make_right.ok
+
+Association.make_right.ok.size(
+  exp: Association
+): Equal<Bool>(Nat.eql(Association.size(exp), Association.size(Association.make_right(exp))), true)
+  ?make_right.ok.size
+
+Association.make_right.go.ok(
+  left: Association
+  right: Association
+): Equal<Association>(
+  Association.make_right.go(left, right)
+  Association.all_right(Nat.pred(Nat.add(Association.size(left), Association.size(right))))
+)
+  ?make_right.go.ok
+
+Association.make_right.same_size(
+  exp: Association
+): Equal<Bool>(Nat.eql(Association.size(exp), Association.size(Association.make_right(exp))), true)
+  ?make_right.same_size
+
+Nat.add.assoc.eql(
+  n0: Nat, n1: Nat, n2: Nat
+): Equal<Bool>(Nat.eql(Nat.add(Nat.add(n0, n1), n2), Nat.add(n0, Nat.add(n1, n2))), true)
+  ?Nat.add.assoc.eql
+
+Association.join<A: Type>(
+  n: Nat
+  m: Nat
+  op: A -> A -> A
+  l: Variadic(n)<A, A>
+  r: Variadic(m)<A, A>
+): Variadic(Nat.add(n, m))<A, A>
+  Variadic.join<A, A, A, A>(n, m, op, l, r)
+
+Association.join.assoc<A: Type>(
+  op: A -> A -> A
+  assoc: (a: A, b: A, c: A) -> Equal<A>(op(op(a, b), c), op(a, op(b, c)))
+  n0: Nat, n1: Nat, n2: Nat
+  e0: Variadic(n0)<A, A>
+  e1: Variadic(n1)<A, A>
+  e2: Variadic(n2)<A, A>
+): Variadic.Forall(
+  Nat.add(Nat.add(n0, n1), n2), A, Variadic.eql<A, A>(
+    Nat.add(Nat.add(n0, n1), n2), Nat.add(n0, Nat.add(n1, n2)), Nat.add.assoc.eql(n0, n1, n2)
+    let left_left = Association.join<A>(n0, n1, op, e0, e1)
+      Association.join<A>(Nat.add(n0, n1), n2, op, left_left, e2)
+    let right_right = Association.join<A>(n1, n2, op, e1, e2)
+      Association.join<A>(n0, Nat.add(n1, n2), op, e0, right_right)
+  )
+)
+  ?join.assoc
+
+Association.canonicalize<A: Type>(
+  op: A -> A -> A
+  assoc: (a: A, b: A, c: A) -> Equal<A>(op(op(a, b), c), op(a, op(b, c)))
+  exp: Association
+): Variadic.Forall(
+  Association.size(exp), A, Variadic.eql<A, A>(
+    Association.size(exp), Association.size(Association.make_right(exp))
+    Association.make_right.ok.size(exp)
+    Association.subst<A>(op, exp)
+    Association.subst<A>(op, Association.make_right(exp))
+  )
+)
+  let lemma = Variadic.eql.refl<A, A>(Association.size(exp), Association.subst<A>(op, exp))
+  let qed = lemma :: rewrite X in
+    (X) Variadic.Forall(Association.size(exp),A,Variadic.eql(A,A,Association.size(exp),Association.size(X),Nat.eql.refl(Association.size(exp)),Association.subst(A,op,exp),Association.subst(A,op,exp))) 
+  ?canonicalize

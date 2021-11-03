@@ -1,0 +1,11 @@
+Variadic.equal<A: Type, B: Type>(
+  n: Nat
+  l: Variadic(n)<A, B>
+  r: Variadic(n)<A, B>
+): Variadic(n)<A, Type>
+  case n with l r {
+    zero:
+      Equal<B>(l, r)
+    succ:
+      (x) Variadic.equal<A, B>(n.pred, l(x), r(x))
+  }!

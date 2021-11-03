@@ -1,0 +1,13 @@
+Equal.rewrite.inj<
+  A: Type, a: A, b: A
+>(e: Equal<A,a,b>
+)<P: A -> Type
+>(x: P(a)
+  y: P(a)
+  H: Equal<P(b)>(Equal.rewrite(A, a, b, e, P, x), Equal.rewrite(A, a, b, e, P, y))
+): Equal<P(a)>(x, y)
+  (case e {
+    refl:
+      (H)
+        H
+  }: (H: Equal<P(e.b)>(Equal.rewrite(A, a, e.b, e, P, x), Equal.rewrite(A, a, e.b, e, P, y))) -> Equal<P(a)>(x, y))(H)

@@ -1,0 +1,12 @@
+Variadic.equal.refl<A: Type, B: Type>(
+  n: Nat
+  a: Variadic(n)<A, B>
+): Variadic.Forall(n, A, Variadic.equal<A, B>(n, a, a))
+  (case n {
+    zero:
+      (a)
+        refl
+    succ:
+      (a, x)
+        Variadic.equal.refl<A, B>(n.pred, a(x))
+  }: (a: Variadic(n)<A, B>) -> Variadic.Forall(n, A, Variadic.equal<A, B>(n, a, a)))(a)

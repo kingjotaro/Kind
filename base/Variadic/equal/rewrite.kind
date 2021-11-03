@@ -1,0 +1,19 @@
+Variadic.equal.rewrite<A: Type, B: Type>(
+  n: Nat, m: Nat
+  H0: Equal<Nat>(n, m)
+  l: Variadic(n)<A, B>
+  r: Variadic(n)<A, B>
+  H1: Variadic.Forall(n, A, Variadic.equal<A, B>(n, l, r))
+): Variadic.Forall(
+     m, A
+     def rewrite = Equal.rewrite<Nat>(n, m, H0, (X) Variadic(X)<A, B>)
+       Variadic.equal<A, B>(m, rewrite(l), rewrite(r))
+   )
+  case H0 {
+    refl:
+      H1
+  }: Variadic.Forall(
+     H0.b, A
+     def rewrite = Equal.rewrite<Nat>(n, H0.b, H0, (X) Variadic(X)<A, B>)
+       Variadic.equal<A, B>(H0.b, rewrite(l), rewrite(r))
+   )

@@ -1,0 +1,7 @@
+Variadic.wrap<A: Type, B: Type, C: Type>(n: Nat, outer: B -> C, inner: Variadic(n)<A, B>): Variadic(n)<A, C>
+  case n with inner {
+    zero:
+      outer(inner)
+    succ:
+      (x) Variadic.wrap<A, B, C, n.pred>(outer, inner(x))
+  }!

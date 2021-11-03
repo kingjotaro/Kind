@@ -1,0 +1,5 @@
+Variadic.Forall(n: Nat, A: Type, B: Variadic(n, A, Type)): Type
+  case n with B {
+    zero: B
+    succ: (a: A) -> Variadic.Forall(n.pred, A, B(a))
+  }!
