@@ -1,3 +1,6 @@
 IO.prompt(text: String): IO<String>
-  IO.ask<String>("get_line", text, (line)
-  IO.end<String>(line))
+  IO {
+    IO.put_text(text)
+    get line = IO.get_text
+    return line
+  }

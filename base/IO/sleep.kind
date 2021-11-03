@@ -1,3 +1,0 @@
-IO.sleep(time: Nat): IO<Unit>
-  IO.ask<Unit>("sleep", Nat.show(time), ()
-  IO.end<Unit>(unit))

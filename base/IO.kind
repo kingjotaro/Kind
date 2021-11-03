@@ -1,6 +1,54 @@
 type IO <A: Type> {
-  end(value: A),
-  ask(query: String, param: String, then: (response: String) -> IO<A>),
+  // Returns a pure result
+  done(value: A)
+
+  // Prints a text to the console
+  do_put_text(text: String, then: Unit -> IO<A>)
+
+  // Gets a text from the user
+  do_get_text(then: String -> IO<A>)
+
+  // Writes a file
+  do_put_file(path: String, file: String, then: Bool -> IO<A>)
+
+  // Reads a file
+  do_get_file(path: String, then: Maybe<String> -> IO<A>)
+
+  // Deletes a file
+  do_del_file(path: String, then: Bool -> IO<A>)
+
+  // Gets all files in a directory
+  do_get_directory(path: String, then: Maybe<List<String>> -> IO<A>)
+
+  // Gets the write time of a file
+  do_get_file_mtime(path: String, then: Maybe<Nat> -> IO<A>)
+
+  // Fetches a URL
+  do_fetch(url: String, options: Map<String>, headers: Map<String>, then: Maybe<String> -> IO<A>)
+
+  // Returns the current time, in milliseconds since epoch
+  do_get_time(then: Nat -> IO<A>)
+
+  // Returns the program argument list
+  do_get_arguments(then: List<String> -> IO<A>)
+
+  // Starts listening to an UDP port
+  do_init_udp(port: Nat, then: Bool -> IO<A>)
+
+  // Stops listening to an UDP port
+  do_stop_udp(port: Nat, then: Bool -> IO<A>)
+
+  // Sends an UDP packet
+  do_send_udp(port: U16, dest: IO.Net.Address, data: Buffer8, then: Unit -> IO<A>)
+
+  // Receives an incoming UDP message
+  do_receive_udp(then: Maybe<IO.Net.Mail> -> IO<A>)
+
+  // Waits a given amount of time
+  do_sleep(time: Nat, then: Unit -> IO<A>)
+
+  // Spawns a thread
+  do_spawn(thread: IO<Unit>, then: Unit -> IO<A>)
 }
 
 type IO.Net.Address {
@@ -9,56 +57,55 @@ type IO.Net.Address {
 
 type IO.Net.Mail {
   new(
-    from: IO.NetAddress
+    from: IO.Net.Address
     data: Buffer8
   )
 }
 
-1. Melhorar o tipo IO, permitir spawn de threads
-  - Trabalhoso: atualizar compiladores, reescrever libs atuais
-2. Recriar o sistema de rooms com o novo tipo IO
-3. Simplificar o tipo App para ter apenas estado local
-4. Otimizações no compilador
-  - Clean-up geral no código do King, que é antigo
-  - Evitar stack overflows no back-end JavaScript
-  - Migrar o compilador do JavaScript para o Kind
-  - Otimizar o sistema de holes, igualdade, etc.
-5. Consertar o tipo Buffer8 para armazenar o length
-6. Criar um operador de Map.set (o atual, Mat.mut, não inicializa)
+IO.put_text(text: String): IO<Unit>
+  IO.do_put_text<Unit>(text, (x) IO.done<Unit>(unit))
 
-type IO <A: Type> {
-  return(value: A)
+IO.get_text: IO<String>
+  IO.do_get_text<String>((x) IO.done<String>(x))
 
-  // Prints a line to the console
-  put_line(text: String, then: Unit -> IO<A>)
+IO.put_file(path: String, file: String): IO<Bool>
+  IO.do_put_file<Bool>(path, file, (x) IO.done<Bool>(x))
 
-  // Gets a line from the user
-  get_line(then: String -> IO<A>)
+IO.get_file(path: String): IO<Maybe<String>>
+  IO.do_get_file<Maybe<String>>(path, (x) IO.done<Maybe<String>>(x))
 
-  // Fetches a URL
-  fetch(url: String, then: Unit -> IO<A>)
+IO.del_file(path: String): IO<Bool>
+  IO.do_del_file<Bool>(path, (x) IO.done<Bool>(x))
 
-  // Returns the current time, in milliseconds since epoch
-  get_time(then: Nat -> IO<A>)
+IO.get_directory(path: String): IO<Maybe<List<String>>>
+  IO.do_get_directory<Maybe<List<String>>>(path, (x) IO.done<Maybe<List<String>>>(x))
 
-  // Returns the program argument list
-  get_args(then: List<String> -> IO<A>)
+IO.get_file_mtime(path: String): IO<Maybe<Nat>>
+  IO.do_get_file_mtime<Maybe<Nat>>(path, (x) IO.done<Maybe<Nat>>(x))
 
-  // Starts listening to an UDP port
-  init_udp(port: Nat, then: Bool -> IO<A>)
+IO.fetch(url: String, options: Map<String>, headers: Map<String>): IO<Maybe<String>>
+  IO.do_fetch<Maybe<String>>(url, options, headers, (x) IO.done<Maybe<String>>(x))
 
-  // Stops listening to an UDP port
-  stop_udp(port: Nat, then: Bool -> IO<A>)
+IO.get_time: IO<Nat>
+  IO.do_get_time<Nat>((x) IO.done<Nat>(x))
 
-  // Sends an UDP packet
-  send_udp(port: U16, dest: IO.NetAddress, data: Buffer8, then: Unit -> IO<A>)
+IO.get_arguments: IO<List<String>>
+  IO.do_get_arguments<List<String>>((x) IO.done<List<String>>(x))
 
-  // Receives an incoming UDP message
-  receive_udp(then: Maybe<IO.Net.Mail> -> IO<A>)
+IO.init_udp(port: Nat): IO<Bool>
+  IO.do_init_udp<Bool>(port, (x) IO.done<Bool>(x))
 
-  // Waits a given amount of time
-  sleep(time: Nat, then: Unit -> IO<A>)
+IO.stop_udp(port: Nat): IO<Bool>
+  IO.do_stop_udp<Bool>(port, (x) IO.done<Bool>(x))
 
-  // Spawns a thread
-  timeout(program: IO<A>, then: Unit -> IO<A>)
-}
+IO.send_udp(port: U16, dest: IO.Net.Address, data: Buffer8): IO<Unit>
+  IO.do_send_udp<Unit>(port, dest, data, (x) IO.done<Unit>(unit))
+
+IO.receive_udp: IO<Maybe<IO.Net.Mail>>
+  IO.do_receive_udp<Maybe<IO.Net.Mail>>((x) IO.done<Maybe<IO.Net.Mail>>(x))
+
+IO.sleep(time: Nat): IO<Unit>
+  IO.do_sleep<Unit>(time, (x) IO.done<Unit>(unit))
+
+IO.spawn(thread: IO<Unit>): IO<Unit>
+  IO.do_spawn<Unit>(thread, (x) IO.done<Unit>(unit))

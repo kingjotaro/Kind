@@ -1,5 +1,22 @@
+// Executes an IO action purely, feeding negative defaults to each query
 IO.purify<A: Type>(io: IO<A>): A
   case io {
-    end: io.value,
-    ask: IO.purify<A>(io.then("")),
+    done: io.value
+    do_put_text: IO.purify<A>(io.then(unit))
+    do_get_text: IO.purify<A>(io.then(""))
+    do_put_file: IO.purify<A>(io.then(false))
+    do_get_file: IO.purify<A>(io.then(none))
+    do_del_file: IO.purify<A>(io.then(false))
+    do_get_directory: IO.purify<A>(io.then(none))
+    do_get_file_mtime: IO.purify<A>(io.then(none))
+    do_fetch: IO.purify<A>(io.then(none))
+    do_get_time: IO.purify<A>(io.then(0))
+    do_get_arguments: IO.purify<A>(io.then([]))
+    do_init_udp: IO.purify<A>(io.then(false))
+    do_stop_udp: IO.purify<A>(io.then(false))
+    do_send_udp: IO.purify<A>(io.then(unit))
+    do_receive_udp: IO.purify<A>(io.then(none))
+    do_sleep: IO.purify<A>(io.then(unit))
+    do_spawn: IO.purify<A>(io.then(unit))
   }
+

@@ -1,5 +1,20 @@
 IO.bind<A: Type, B: Type>(a: IO<A>, f: A -> IO<B>): IO<B>
   case a {
-    end: f(a.value),
-    ask: IO.ask<B>(a.query, a.param, (x) IO.bind<A,B>(a.then(x), f)),
+    done: f(a.value)
+    do_put_text: IO.do_put_text<B>(a.text, (x) IO.bind<A,B>(a.then(x), f))
+    do_get_text: IO.do_get_text<B>((x) IO.bind<A,B>(a.then(x), f))
+    do_put_file: IO.do_put_file<B>(a.path, a.file, (x) IO.bind<A,B>(a.then(x), f))
+    do_get_file: IO.do_get_file<B>(a.path, (x) IO.bind<A,B>(a.then(x), f))
+    do_del_file: IO.do_del_file<B>(a.path, (x) IO.bind<A,B>(a.then(x), f))
+    do_get_directory: IO.do_get_directory<B>(a.path, (x) IO.bind<A,B>(a.then(x), f))
+    do_get_file_mtime: IO.do_get_file_mtime<B>(a.path, (x) IO.bind<A,B>(a.then(x), f))
+    do_fetch: IO.do_fetch<B>(a.url, a.options, a.headers, (x) IO.bind<A,B>(a.then(x), f))
+    do_get_time: IO.do_get_time<B>((x) IO.bind<A,B>(a.then(x), f))
+    do_get_arguments: IO.do_get_arguments<B>((x) IO.bind<A,B>(a.then(x), f))
+    do_init_udp: IO.do_init_udp<B>(a.port, (x) IO.bind<A,B>(a.then(x), f))
+    do_stop_udp: IO.do_stop_udp<B>(a.port, (x) IO.bind<A,B>(a.then(x), f))
+    do_send_udp: IO.do_send_udp<B>(a.port, a.dest, a.data, (x) IO.bind<A,B>(a.then(x), f))
+    do_receive_udp: IO.do_receive_udp<B>((x) IO.bind<A,B>(a.then(x), f))
+    do_sleep: IO.do_sleep<B>(a.time, (x) IO.bind<A,B>(a.then(x), f))
+    do_spawn: IO.do_spawn<B>(a.thread, (x) IO.bind<A,B>(a.then(x), f))
   }

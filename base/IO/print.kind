@@ -1,2 +1,2 @@
 IO.print(text: String): IO<Unit>
-  IO.put_string(text | "\n")
+  IO.put_text(text | "\n")

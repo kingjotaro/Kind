@@ -1,3 +1,0 @@
-IO.init_udp(port: Nat): IO<Unit>
-  IO.ask<Unit>("init_udp", Nat.show(port), ()
-  IO.end<Unit>(unit))
