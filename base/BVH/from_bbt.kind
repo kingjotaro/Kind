@@ -1,6 +1,6 @@
 BVH.from_bbt<K: Type, V: Type>(
   bbt: BBT<K, V>
-  to_box: List<Pair<K, V>> -> V, 
+  to_box: List<V> -> V, 
   cmp: Nat -> V -> V -> Cmp
 ): BVH<K, V>
 

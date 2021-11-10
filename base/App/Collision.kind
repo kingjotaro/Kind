@@ -5,6 +5,7 @@ App.Collision.State: App.State
 type App.Collision.State.Local {
   new(
     shapes: Map<Shape>
+    bvh: BVH<String, Shape>
     mouse: Pair<U32, U32>
   )
 }
@@ -21,15 +22,25 @@ App.Collision.init: App.Init<App.Collision.State>
     "C.2": Shape.circle(Shape.Circle.new(V2.new(240.0, 220), 10.0)),
     "R.1": Shape.rectangle(Shape.Rectangle.new(0.0, 10.0, 120.0, 160.0))
     "R.2": Shape.rectangle(Shape.Rectangle.new(80.0, 200.0, 200.0, 250.0))
-    "P.1": Shape.polygon(
+    // "P.1": Shape.polygon(
+    //   [
+    //   V2.new(294.0, 75.0)
+    //   V2.new(217.0, 55.0)
+    //   V2.new(142.0, 104.0)
+    //   V2.new(250.0, 207.0)
+    //   V2.new(122.0, 80.0)
+    //   ])
+    "P.2": Shape.polygon(
       [
-      V2.new(294.0, 75.0)
-      V2.new(217.0, 55.0)
-      V2.new(142.0, 104.0)
-      V2.new(250.0, 207.0)
-      V2.new(122.0, 80.0)
+      V2.new(100.0, 50.0)
+      V2.new(40.0, 100.0)
+      V2.new(120.0, 160.0)
+      V2.new(60.0, 80.0)
+      V2.new(200.0, 80.0)
       ])
   }    
+
+  let BVH = BVH.from_bbt(shapes)
 
   let mouse = {0,0}
   let local = App.Collision.State.Local.new(shapes, mouse)
@@ -43,7 +54,11 @@ App.Collision.draw(img: VoxBox): App.Draw<App.Collision.State>
     for name:shape in local@shapes with img:
       Shape.draw(shape, 10, Col32.new(255, 0, 0, 255), img)
     img
-
+  let circle = Shape.circle(Shape.Circle(local@mouse@x, local@mouse@y, 10.0)
+  let collisions = BVH.collisions!!(String.eql, Shape.collision, Maybe.none, circle, )
+  let vbox = Shape.Circle.draw(circle)
+  vbox
+    
   <div style={"width": "vw", "height": "hw"}>
     {
       DOM.vbox(
