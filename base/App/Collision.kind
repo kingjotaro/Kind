@@ -40,10 +40,10 @@ App.Collision.init: App.Init<App.Collision.State>
       ])
   }    
 
-  let BVH = BVH.from_bbt(shapes)
+  let bvh = Shape.BVH.from_bbt!(shapes)
 
   let mouse = {0,0}
-  let local = App.Collision.State.Local.new(shapes, mouse)
+  let local = App.Collision.State.Local.new(shapes, bvh, mouse)
   App.Store.new<App.Collision.State>(local, 0)
 
 // Render function
@@ -54,10 +54,6 @@ App.Collision.draw(img: VoxBox): App.Draw<App.Collision.State>
     for name:shape in local@shapes with img:
       Shape.draw(shape, 10, Col32.new(255, 0, 0, 255), img)
     img
-  let circle = Shape.circle(Shape.Circle(local@mouse@x, local@mouse@y, 10.0)
-  let collisions = BVH.collisions!!(String.eql, Shape.collision, Maybe.none, circle, )
-  let vbox = Shape.Circle.draw(circle)
-  vbox
     
   <div style={"width": "vw", "height": "hw"}>
     {

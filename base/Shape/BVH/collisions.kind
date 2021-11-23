@@ -4,4 +4,4 @@ Shape.BVH.collisions<K: Type>(
   shape: Shape
   bvh: BVH<K, Shape>
 ): List<K>
-BVH.collision<K, Shape>(eql, Shape.collision, key, shape, bvh)
+BVH.collision<K, Shape>(eql, Shape.collision, key, shape, bvh)c
