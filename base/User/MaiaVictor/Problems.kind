@@ -71,7 +71,7 @@ Problems.p8(n: Nat): Nat
     zero: 0
     succ: case n.pred {
       zero: 0
-      succ: Nat.succ(Problems.p8(n.pred))
+      succ: Nat.succ(Problems.p8(n.pred.pred))
     }
   }
 
